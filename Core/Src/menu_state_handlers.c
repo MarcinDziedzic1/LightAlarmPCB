@@ -140,29 +140,29 @@ void HandleMenuState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         lastBtnPress = now;
 
         // Reagujemy w zależności od menuIndex
-        if (menuIndex == 2)
+        if (menuIndex == 1)
         {
-            subMenu2Index = 0;
+        	currentSubMenuIndex = 0;
+            gState = SUBMENU_ALARM;
+            DisplayAlarmMenu(lcd, currentSubMenuIndex);
+        }
+        else if (menuIndex == 2)
+        {
+        	currentSubMenuIndex = 0;
             gState = SUBMENU_2;
-            DisplaySubMenu2(lcd, subMenu2Index, usb_OnOff);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb_OnOff);
         }
         else if (menuIndex == 3)
         {
-            subMenu2BIndex = 0;
+        	currentSubMenuIndex = 0;
             gState = SUBMENU_2B;
-            DisplaySubMenu2B(lcd, subMenu2BIndex, usb2_OnOff);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb2_OnOff);
         }
         else if (menuIndex == 4)
         {
-            subMenuLBIndex = 0;
+        	currentSubMenuIndex = 0;
             gState = SUBMENU_L_BULB;
-            DisplayLBulbMenu(lcd, subMenuLBIndex, l_BulbOnOff);
-        }
-        else if (menuIndex == 1)
-        {
-            subMenuAlarmIndex = 0;
-            gState = SUBMENU_ALARM;
-            DisplayAlarmMenu(lcd, subMenuAlarmIndex);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
         }
         else
         {
@@ -217,15 +217,15 @@ void HandleSubMenu2State(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             lastEncMove = now;
             if (val == 0)
             {
-                subMenu2Index--;
-                if (subMenu2Index < 0) subMenu2Index = 2;
+            	currentSubMenuIndex--;
+                if (currentSubMenuIndex < 0) currentSubMenuIndex = 2;
             }
             else
             {
-                subMenu2Index++;
-                if (subMenu2Index > 2) subMenu2Index = 0;
+            	currentSubMenuIndex++;
+                if (currentSubMenuIndex > 2) currentSubMenuIndex = 0;
             }
-            DisplaySubMenu2(lcd, subMenu2Index, usb_OnOff);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb_OnOff);
         }
     }
 
@@ -234,14 +234,14 @@ void HandleSubMenu2State(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
-        switch(subMenu2Index)
+        switch(currentSubMenuIndex)
         {
         case 0: // ON
             if (usb_OnOff != 1)
             {
                 usb_OnOff = 1;
                 HAL_GPIO_WritePin(USB1_EN_GPIO_Port, USB1_EN_Pin, GPIO_PIN_SET);
-                DisplaySubMenu2(lcd, subMenu2Index, usb_OnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb_OnOff);
             }
             break;
         case 1: // OFF
@@ -249,7 +249,7 @@ void HandleSubMenu2State(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             {
                 usb_OnOff = 2;
                 HAL_GPIO_WritePin(USB1_EN_GPIO_Port, USB1_EN_Pin, GPIO_PIN_RESET);
-                DisplaySubMenu2(lcd, subMenu2Index, usb_OnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb_OnOff);
             }
             break;
         case 2: // BACK
@@ -276,15 +276,15 @@ void HandleSubMenu2BState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             lastEncMove = now;
             if (val == 0)
             {
-                subMenu2BIndex--;
-                if (subMenu2BIndex < 0) subMenu2BIndex = 2;
+            	currentSubMenuIndex--;
+                if (currentSubMenuIndex < 0) currentSubMenuIndex = 2;
             }
             else
             {
-                subMenu2BIndex++;
-                if (subMenu2BIndex > 2) subMenu2BIndex = 0;
+            	currentSubMenuIndex++;
+                if (currentSubMenuIndex > 2) currentSubMenuIndex = 0;
             }
-            DisplaySubMenu2B(lcd, subMenu2BIndex, usb2_OnOff);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb2_OnOff);
         }
     }
 
@@ -293,14 +293,14 @@ void HandleSubMenu2BState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
-        switch(subMenu2BIndex)
+        switch(currentSubMenuIndex)
         {
         case 0: // ON
             if (usb2_OnOff != 1)
             {
                 usb2_OnOff = 1;
                 HAL_GPIO_WritePin(USB2_EN_GPIO_Port, USB2_EN_Pin, GPIO_PIN_SET);
-                DisplaySubMenu2B(lcd, subMenu2BIndex, usb2_OnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb2_OnOff);
             }
             break;
         case 1: // OFF
@@ -308,7 +308,7 @@ void HandleSubMenu2BState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             {
                 usb2_OnOff = 2;
                 HAL_GPIO_WritePin(USB2_EN_GPIO_Port, USB2_EN_Pin, GPIO_PIN_RESET);
-                DisplaySubMenu2B(lcd, subMenu2BIndex, usb2_OnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb2_OnOff);
             }
             break;
         case 2: // BACK
@@ -335,15 +335,15 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             lastEncMove = now;
             if (val == 0)
             {
-                subMenuLBIndex--;
-                if (subMenuLBIndex < 0) subMenuLBIndex = 2;
+            	currentSubMenuIndex--;
+                if (currentSubMenuIndex < 0) currentSubMenuIndex = 2;
             }
             else
             {
-                subMenuLBIndex++;
-                if (subMenuLBIndex > 2) subMenuLBIndex = 0;
+            	currentSubMenuIndex++;
+                if (currentSubMenuIndex > 2) currentSubMenuIndex = 0;
             }
-            DisplayLBulbMenu(lcd, subMenuLBIndex, l_BulbOnOff);
+            DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
         }
     }
 
@@ -352,14 +352,14 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
-        switch(subMenuLBIndex)
+        switch(currentSubMenuIndex)
         {
         case 0: // ON
             if (l_BulbOnOff != 1)
             {
                 l_BulbOnOff = 1;
                 LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
-                DisplayLBulbMenu(lcd, subMenuLBIndex, l_BulbOnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
             break;
         case 1: // OFF
@@ -367,7 +367,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             {
                 l_BulbOnOff = 2;
                 LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
-                DisplayLBulbMenu(lcd, subMenuLBIndex, l_BulbOnOff);
+                DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
             break;
         case 2: // BACK
@@ -394,15 +394,15 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             lastEncMove = now;
             if (val == 0)
             {
-                subMenuAlarmIndex--;
-                if (subMenuAlarmIndex < 0) subMenuAlarmIndex = 1;
+            	currentSubMenuIndex--;
+                if (currentSubMenuIndex < 0) currentSubMenuIndex = 1;
             }
             else
             {
-                subMenuAlarmIndex++;
-                if (subMenuAlarmIndex > 1) subMenuAlarmIndex = 0;
+            	currentSubMenuIndex++;
+                if (currentSubMenuIndex > 1) currentSubMenuIndex = 0;
             }
-            DisplayAlarmMenu(lcd, subMenuAlarmIndex);
+            DisplayAlarmMenu(lcd, currentSubMenuIndex);
         }
     }
 
@@ -411,7 +411,7 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
-        switch(subMenuAlarmIndex)
+        switch(currentSubMenuIndex)
         {
         case 0: // SET
             alarmSetIndex = 0;

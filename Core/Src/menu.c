@@ -11,10 +11,7 @@ extern TIM_HandleTypeDef htim3;
 // Definicja globalnych zmiennych (bez extern)
 MenuState gState = MENU_STATE;  // start w głównym menu
 int8_t menuIndex = 0;
-int8_t subMenu2Index = 0;
-int8_t subMenu2BIndex = 0;
-int8_t subMenuLBIndex = 0;
-int8_t subMenuAlarmIndex = 0;  // 0=SET, 1=BACK
+int8_t currentSubMenuIndex = 0;
 int8_t alarmSetIndex = 0;      // 0=day,1=month,2=year,3=hour,4=min,5=sec
 
 int usb_OnOff   = 1;  // 1=ON, 2=OFF
@@ -116,30 +113,30 @@ void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *h
     }
     case 1: // ALARM
     {
-    	subMenuAlarmIndex = 0;
+    	currentSubMenuIndex = 0;
     	gState = SUBMENU_ALARM;
-    	DisplayAlarmMenu(lcd, subMenuAlarmIndex);
+    	DisplayAlarmMenu(lcd, currentSubMenuIndex);
     	break;
     }
     case 2: // USB1 => sub-menu
     {
-        subMenu2Index = 0;
+    	currentSubMenuIndex = 0;
         gState = SUBMENU_2;
-        DisplaySubMenu2(lcd, subMenu2Index, usb_OnOff);
+        DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb_OnOff);
         break;
     }
     case 3: // USB2 => sub-menuB
     {
-    	subMenu2BIndex = 0;
+    	currentSubMenuIndex = 0;
     	gState = SUBMENU_2B;
-        DisplaySubMenu2B(lcd, subMenu2BIndex, usb2_OnOff);
+        DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, usb2_OnOff);
     	break;
     }
     case 4:
     {
-    	subMenuLBIndex = 0;
+    	currentSubMenuIndex = 0;
     	gState = SUBMENU_L_BULB;
-    	DisplayLBulbMenu(lcd, subMenuLBIndex, l_BulbOnOff);
+    	DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
     	break;
     }
     case 5: // SENSOR
@@ -159,7 +156,7 @@ void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *h
 /**
  * @brief Wyświetla sub-menu USB1 (ON/OFF/BACK).
  */
-void DisplaySubMenu2(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb_OnOff)
+void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_OnOff)
 {
     Lcd_clear(lcd);
 
@@ -176,7 +173,7 @@ void DisplaySubMenu2(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb_OnOff)
         snprintf(onLabel, sizeof(onLabel), ">ON ");
     else
         snprintf(onLabel, sizeof(onLabel), " ON ");
-    if (usb_OnOff == 1)
+    if (device_OnOff == 1)
     {
         int len = strlen(onLabel);
         if (len < 6)
@@ -189,7 +186,7 @@ void DisplaySubMenu2(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb_OnOff)
         snprintf(offLabel, sizeof(offLabel), ">OFF ");
     else
         snprintf(offLabel, sizeof(offLabel), " OFF ");
-    if (usb_OnOff == 2)
+    if (device_OnOff == 2)
     {
         int len = strlen(offLabel);
         if (len < 6)
@@ -215,119 +212,119 @@ void DisplaySubMenu2(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb_OnOff)
     Lcd_string(lcd, row1);
 }
 
-void DisplaySubMenu2B(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb2_OnOff)
-{
-    Lcd_clear(lcd);
-
-    char row0[17];
-    char row1[17];
-    memset(row0, ' ', 16);
-    memset(row1, ' ', 16);
-    row0[16] = '\0';
-    row1[16] = '\0';
-
-    // ON
-    char onLabel[8];
-    if (subIndex == 0)
-        snprintf(onLabel, sizeof(onLabel), ">ON ");
-    else
-        snprintf(onLabel, sizeof(onLabel), " ON ");
-    if (usb2_OnOff == 1)
-    {
-        int len = strlen(onLabel);
-        if (len < 6)
-            onLabel[len - 1] = '*';
-    }
-
-    // OFF
-    char offLabel[8];
-    if (subIndex == 1)
-        snprintf(offLabel, sizeof(offLabel), ">OFF ");
-    else
-        snprintf(offLabel, sizeof(offLabel), " OFF ");
-    if (usb2_OnOff == 2)
-    {
-        int len = strlen(offLabel);
-        if (len < 6)
-            offLabel[len - 1] = '*';
-    }
-
-    // Pierwszy wiersz: ON i OFF
-    strncpy(&row0[0], onLabel, strlen(onLabel));
-    strncpy(&row0[6], offLabel, strlen(offLabel));
-
-    // BACK
-    char backLabel[8];
-    if (subIndex == 2)
-        snprintf(backLabel, sizeof(backLabel), ">BACK");
-    else
-        snprintf(backLabel, sizeof(backLabel), " BACK");
-
-    strncpy(&row1[0], backLabel, strlen(backLabel));
-
-    Lcd_cursor(lcd, 0, 0);
-    Lcd_string(lcd, row0);
-    Lcd_cursor(lcd, 1, 0);
-    Lcd_string(lcd, row1);
-}
-/**
- * @brief Wyświetla sub-menu lampki (ON/OFF/BACK).
- */
-void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff)
-{
-    Lcd_clear(lcd);
-
-    char row0[17];
-    char row1[17];
-    memset(row0, ' ', 16);
-    memset(row1, ' ', 16);
-    row0[16] = '\0';
-    row1[16] = '\0';
-
-    // ON
-    char onLabel[8];
-    if (subIndex == 0)
-        snprintf(onLabel, sizeof(onLabel), ">ON ");
-    else
-        snprintf(onLabel, sizeof(onLabel), " ON ");
-    if (l_BulbOnOff == 1)
-    {
-        int len = strlen(onLabel);
-        if (len < 6)
-            onLabel[len - 1] = '*';
-    }
-
-    // OFF
-    char offLabel[8];
-    if (subIndex == 1)
-        snprintf(offLabel, sizeof(offLabel), ">OFF ");
-    else
-        snprintf(offLabel, sizeof(offLabel), " OFF ");
-    if (l_BulbOnOff == 2)
-    {
-        int len = strlen(offLabel);
-        if (len < 6)
-            offLabel[len - 1] = '*';
-    }
-
-    // Pierwszy wiersz: ON i OFF
-    strncpy(&row0[0], onLabel, strlen(onLabel));
-    strncpy(&row0[6], offLabel, strlen(offLabel));
-
-    // BACK
-    char backLabel[8];
-    if (subIndex == 2)
-        snprintf(backLabel, sizeof(backLabel), ">BACK");
-    else
-        snprintf(backLabel, sizeof(backLabel), " BACK");
-
-    strncpy(&row1[0], backLabel, strlen(backLabel));
-
-    Lcd_cursor(lcd, 0, 0);
-    Lcd_string(lcd, row0);
-    Lcd_cursor(lcd, 1, 0);
-    Lcd_string(lcd, row1);
-}
+//void DisplaySubMenu2B(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb2_OnOff)
+//{
+//    Lcd_clear(lcd);
+//
+//    char row0[17];
+//    char row1[17];
+//    memset(row0, ' ', 16);
+//    memset(row1, ' ', 16);
+//    row0[16] = '\0';
+//    row1[16] = '\0';
+//
+//    // ON
+//    char onLabel[8];
+//    if (subIndex == 0)
+//        snprintf(onLabel, sizeof(onLabel), ">ON ");
+//    else
+//        snprintf(onLabel, sizeof(onLabel), " ON ");
+//    if (usb2_OnOff == 1)
+//    {
+//        int len = strlen(onLabel);
+//        if (len < 6)
+//            onLabel[len - 1] = '*';
+//    }
+//
+//    // OFF
+//    char offLabel[8];
+//    if (subIndex == 1)
+//        snprintf(offLabel, sizeof(offLabel), ">OFF ");
+//    else
+//        snprintf(offLabel, sizeof(offLabel), " OFF ");
+//    if (usb2_OnOff == 2)
+//    {
+//        int len = strlen(offLabel);
+//        if (len < 6)
+//            offLabel[len - 1] = '*';
+//    }
+//
+//    // Pierwszy wiersz: ON i OFF
+//    strncpy(&row0[0], onLabel, strlen(onLabel));
+//    strncpy(&row0[6], offLabel, strlen(offLabel));
+//
+//    // BACK
+//    char backLabel[8];
+//    if (subIndex == 2)
+//        snprintf(backLabel, sizeof(backLabel), ">BACK");
+//    else
+//        snprintf(backLabel, sizeof(backLabel), " BACK");
+//
+//    strncpy(&row1[0], backLabel, strlen(backLabel));
+//
+//    Lcd_cursor(lcd, 0, 0);
+//    Lcd_string(lcd, row0);
+//    Lcd_cursor(lcd, 1, 0);
+//    Lcd_string(lcd, row1);
+//}
+///**
+// * @brief Wyświetla sub-menu lampki (ON/OFF/BACK).
+// */
+//void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff)
+//{
+//    Lcd_clear(lcd);
+//
+//    char row0[17];
+//    char row1[17];
+//    memset(row0, ' ', 16);
+//    memset(row1, ' ', 16);
+//    row0[16] = '\0';
+//    row1[16] = '\0';
+//
+//    // ON
+//    char onLabel[8];
+//    if (subIndex == 0)
+//        snprintf(onLabel, sizeof(onLabel), ">ON ");
+//    else
+//        snprintf(onLabel, sizeof(onLabel), " ON ");
+//    if (l_BulbOnOff == 1)
+//    {
+//        int len = strlen(onLabel);
+//        if (len < 6)
+//            onLabel[len - 1] = '*';
+//    }
+//
+//    // OFF
+//    char offLabel[8];
+//    if (subIndex == 1)
+//        snprintf(offLabel, sizeof(offLabel), ">OFF ");
+//    else
+//        snprintf(offLabel, sizeof(offLabel), " OFF ");
+//    if (l_BulbOnOff == 2)
+//    {
+//        int len = strlen(offLabel);
+//        if (len < 6)
+//            offLabel[len - 1] = '*';
+//    }
+//
+//    // Pierwszy wiersz: ON i OFF
+//    strncpy(&row0[0], onLabel, strlen(onLabel));
+//    strncpy(&row0[6], offLabel, strlen(offLabel));
+//
+//    // BACK
+//    char backLabel[8];
+//    if (subIndex == 2)
+//        snprintf(backLabel, sizeof(backLabel), ">BACK");
+//    else
+//        snprintf(backLabel, sizeof(backLabel), " BACK");
+//
+//    strncpy(&row1[0], backLabel, strlen(backLabel));
+//
+//    Lcd_cursor(lcd, 0, 0);
+//    Lcd_string(lcd, row0);
+//    Lcd_cursor(lcd, 1, 0);
+//    Lcd_string(lcd, row1);
+//}
 void AlarmPRESet(void)
 {
     // Odczyt aktualnego czasu z RTC

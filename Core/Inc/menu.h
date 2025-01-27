@@ -48,19 +48,9 @@ extern int8_t menuIndex;
 extern int menuCount;
 
 /**
- * @brief Indeks w sub-menu USB1 (0..2 => ON/OFF/BACK).
+ * @brief Indeks w sub-menu (0..2 => ON/OFF/BACK).
  */
-extern int8_t subMenu2Index;
-
-/**
- * @brief Indeks w sub-menu USB2 (0..2 => ON/OFF/BACK).
- */
-extern int8_t subMenu2BIndex;
-/**
- * @brief Indeks w sub-menu lampki (0..2 => ON/OFF/BACK).
- */
-extern int8_t subMenuLBIndex;
-
+extern int8_t currentSubMenuIndex;
 /**
  * @brief Wybór ON/OFF (usb): 0 = brak, 1 = ON, 2 = OFF (oznaczenie gwiazdką).
  */
@@ -75,7 +65,7 @@ extern int usb2_OnOff;
  */
 extern int l_BulbOnOff;
 
-extern int8_t subMenuAlarmIndex;    // 0=SET, 1=BACK
+
 extern int8_t alarmSetIndex;        // Które pole edytujemy (0=day,1=month,2=year,3=hour,4=min,5=sec)
 // ----- Deklaracje funkcji -----
 
@@ -106,14 +96,14 @@ void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *h
 /**
  * @brief Wyświetla sub-menu USB1: ON/OFF/BACK.
  */
-void DisplaySubMenu2(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb_OnOff);
+void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_OnOff);
 /**
  * @brief Wyświetla sub-menu USB2: ON/OFF/BACK.
  */
-void DisplaySubMenu2B(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb2_OnOff);
+// void DisplaySubMenu2B(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb2_OnOff);
 /**
  * @brief Wyświetla sub-menu lampki: ON/OFF/BACK.
  */
-void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff);
+// void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff);
 
 #endif /* MENU_H */

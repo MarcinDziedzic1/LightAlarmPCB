@@ -12,5 +12,5 @@
 void LightSen_Init(I2C_HandleTypeDef *hi2c);
 uint16_t LightSen_ReadLux(I2C_HandleTypeDef *hi2c);
 void LightSen_DisplayLux(Lcd_HandleTypeDef *lcd, uint16_t lux);
-
+// sksksk
 #endif /* LIGHT_SEN_H_ */

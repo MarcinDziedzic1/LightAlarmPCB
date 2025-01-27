@@ -82,7 +82,7 @@ extern int8_t alarmSetIndex;        // Które pole edytujemy (0=day,1=month,2=ye
 
 void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex);
 void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t alarmSetIndex, bool blinkOn);
-void AlarmSet(void);
+void AlarmPRESet(void);
 
 /**
  * @brief Wyświetla główne menu w trybie „scrollowalnym”.

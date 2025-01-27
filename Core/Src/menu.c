@@ -328,7 +328,7 @@ void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff)
     Lcd_cursor(lcd, 1, 0);
     Lcd_string(lcd, row1);
 }
-void AlarmSet(void)
+void AlarmPRESet(void)
 {
     // Odczyt aktualnego czasu z RTC
     RTC_TimeTypeDef now;
@@ -340,8 +340,8 @@ void AlarmSet(void)
     alarmData.year = now.year; // np. 25 oznacza rok 2025 (zależnie od RTC)
 
     // Przykładowy czas alarmu: 19:58:00
-    alarmData.hour = 19;
-    alarmData.minute = 58;
+    alarmData.hour = 12;
+    alarmData.minute = 30;
     alarmData.second = 0;
 
     // Możemy ustawić dzień tygodnia, jeśli potrzebujemy go do logiki

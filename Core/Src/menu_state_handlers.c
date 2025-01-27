@@ -30,16 +30,6 @@ void CheckAlarmTrigger(const RTC_TimeTypeDef *rtc_info)
     }
 }
 
-void SaveAlarm(uint8_t day, uint8_t month, uint8_t year, uint8_t hour, uint8_t min, uint8_t sec)
-{
-	alarmData.day = day;
-	alarmData.month = month;
-	alarmData.year = year;
-	alarmData.hour = hour;
-	alarmData.minute = min;
-	alarmData.second = sec;
-}
-
 /* --------------------------------------------------------------------------
    Zaawansowany debouncing przycisku:
    - 3 próbki w krótkich odstępach (np. co 20 ms)
@@ -510,7 +500,6 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         alarmSetIndex++;
         if (alarmSetIndex > 5)
         {
-//        	SaveAlarm(alarmData.day, alarmData.month, alarmData.year, alarmData.hour, alarmData.minute, alarmData.second);
             gState = SUBMENU_ALARM;
             DisplayAlarmMenu(lcd, 0);
         }

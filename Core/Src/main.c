@@ -125,7 +125,7 @@ int main(void)
 
   // Na starcie wyświetlamy menu główne
   Menu_Display(&lcd, menuIndex);
-  AlarmSet();
+  AlarmPRESet();
   /* USER CODE END 2 */
 
   // --- Pętla główna ---

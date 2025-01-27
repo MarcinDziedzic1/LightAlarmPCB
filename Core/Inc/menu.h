@@ -94,16 +94,8 @@ void Menu_Display(Lcd_HandleTypeDef *lcd, uint8_t index);
 void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *hi2c);
 
 /**
- * @brief Wyświetla sub-menu USB1: ON/OFF/BACK.
+ * @brief Wyświetla sub-menu: ON/OFF/BACK.
  */
 void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_OnOff);
-/**
- * @brief Wyświetla sub-menu USB2: ON/OFF/BACK.
- */
-// void DisplaySubMenu2B(Lcd_HandleTypeDef *lcd, int8_t subIndex, int usb2_OnOff);
-/**
- * @brief Wyświetla sub-menu lampki: ON/OFF/BACK.
- */
-// void DisplayLBulbMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex, int l_BulbOnOff);
 
 #endif /* MENU_H */

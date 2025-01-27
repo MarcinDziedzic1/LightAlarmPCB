@@ -7,28 +7,7 @@
 extern I2C_HandleTypeDef hi2c1;
 extern TIM_HandleTypeDef htim3;
 
-
-/**
- * @brief Sprawdza, czy aktualny czas RTC zgadza się z ustawionym alarmem.
- *        Jeśli tak – włącza lampkę (fade in).
- */
-
-
-void CheckAlarmTrigger(const RTC_TimeTypeDef *rtc_info)
-{
-	if ((rtc_info->day    == alarmData.day)    &&
-	    (rtc_info->month  == alarmData.month)  &&
-	    (rtc_info->year   == alarmData.year)   &&
-	    (rtc_info->hours  == alarmData.hour)   &&
-	    (rtc_info->minutes== alarmData.minute) &&
-	    (rtc_info->seconds== alarmData.second))
-    {
-        // Alarm wyzwolony!
-        l_BulbOnOff = 1;
-        // Przykładowe rozjaśnienie w 2 sekundy
-        LedFade_In(&htim3, TIM_CHANNEL_4, 100, 2000);
-    }
-}
+extern int8_t menuIndex;
 
 /* --------------------------------------------------------------------------
    Zaawansowany debouncing przycisku:
@@ -511,3 +490,77 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     }
 }
 
+void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
+{
+	extern bool alarmIsActive;
+	extern uint32_t lastEncMove;
+	extern uint32_t lastBtnPress;
+    static int8_t lastSubMenuIndex = -1;   // Przechowa poprzednią wartość
+    static bool displayDirty = true;       // Flaga: czy musimy prze-rysować?
+
+    if (l_BulbOnOff == 2)
+    {
+    	l_BulbOnOff = 1; // Włączona
+    	LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
+    }
+
+    // --- Obsługa enkodera ---
+    if ((val == 0 || val == 1) && ((now - lastEncMove) >= 350))
+    {
+        lastEncMove = now;
+        // ... sprawdzasz czas, antydrgania itp.
+        int dir = (val == 0) ? -1 : +1;
+        currentSubMenuIndex += dir;
+        if (currentSubMenuIndex < 0) currentSubMenuIndex = 1;
+        if (currentSubMenuIndex > 1) currentSubMenuIndex = 0;
+
+        // Tylko jeśli indeks się faktycznie zmienił
+        if (currentSubMenuIndex != lastSubMenuIndex)
+        {
+            displayDirty = true; // zasygnalizuj potrzebę odświeżenia
+        }
+    }
+
+    // --- Obsługa przycisku STOP / SNOOZE ---
+    bool pressed = CheckDebouncedButton();
+    if (pressed && ((now - lastBtnPress) >= 500))
+    {
+        lastBtnPress = now;
+        if (currentSubMenuIndex == 0)
+        {
+            // STOP -> wyłącz
+            l_BulbOnOff = 2;
+        	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            alarmIsActive = false;
+            gState = MENU_STATE;
+        }
+        else
+        {
+            // SNOOZE -> +5 min
+            alarmData.minute += 5;
+            if (alarmData.minute >= 60)
+            {
+            	alarmData.minute -= 60;
+            	alarmData.hour++;
+            	if (alarmData.hour > 23)
+            		{
+            		alarmData.hour = 0;
+            		alarmData.day += 1;
+            		}
+            }
+            l_BulbOnOff = 2;
+            LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            alarmIsActive = false;
+            gState = MENU_STATE;
+        }
+        return; // bo wychodzimy ze stanu
+    }
+
+    // --- Rysowanie na LCD (tylko gdy "displayDirty == true") ---
+    if (displayDirty)
+    {
+        DisplayAlarmTriggered(lcd, currentSubMenuIndex);
+        lastSubMenuIndex = currentSubMenuIndex;
+        displayDirty = false;
+    }
+}

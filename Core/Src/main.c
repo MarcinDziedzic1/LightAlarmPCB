@@ -29,6 +29,7 @@
 #include "light_sen.h"
 #include "fade.h"
 #include "menu_state_handlers.h"
+#include "alarm.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,8 @@ UART_HandleTypeDef huart2;
  */
 uint32_t lastEncMove    = 0;
 uint32_t lastBtnPress   = 0;
+
+
 
 /**
  * @brief Zmienna używana m.in. do odświeżania ekranu co pewien interwał.
@@ -122,10 +125,9 @@ int main(void)
       GPIOC, GPIO_PIN_3,  // EN
       LCD_4_BIT_MODE
   );
-
   // Na starcie wyświetlamy menu główne
   Menu_Display(&lcd, menuIndex);
-  AlarmPRESet();
+  AlarmPreSet();
   /* USER CODE END 2 */
 
   // --- Pętla główna ---
@@ -171,6 +173,9 @@ int main(void)
           break;
       case SUBMENU_ALARM_SET:
           HandleSubMenuAlarmSetState(val, now, &lcd);
+          break;
+      case ALARM_TRIGGERED:
+          HandleAlarmTriggered(val, now, &lcd);
           break;
       default:
           // Nieznany stan (ewentualny fallback)

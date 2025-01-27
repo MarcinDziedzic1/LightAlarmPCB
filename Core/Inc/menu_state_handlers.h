@@ -15,7 +15,6 @@ extern "C" {
 /* ------------------------------------------------------------------
    Prototypy funkcji obsługujących poszczególne stany:
    ------------------------------------------------------------------ */
-void CheckAlarmTrigger(const RTC_TimeTypeDef *rtc_info);
 
 void HandleMenuState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleOptionState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
@@ -24,6 +23,7 @@ void HandleSubMenu2BState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
+void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 
 #ifdef __cplusplus
 }

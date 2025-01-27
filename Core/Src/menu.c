@@ -212,40 +212,9 @@ void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_On
     Lcd_string(lcd, row1);
 }
 
-void AlarmPRESet(void)
-{
-    // Odczyt aktualnego czasu z RTC
-    RTC_TimeTypeDef now;
-    RTC_ReadTime(&now);
-
-    // Ustawiamy alarm na dzisiejszą datę i określoną godzinę
-    alarmData.day = now.day;
-    alarmData.month = now.month;
-    alarmData.year = now.year; // np. 25 oznacza rok 2025 (zależnie od RTC)
-
-    // Przykładowy czas alarmu: 19:58:00
-    alarmData.hour = 12;
-    alarmData.minute = 30;
-    alarmData.second = 0;
-
-    // Możemy ustawić dzień tygodnia, jeśli potrzebujemy go do logiki
-    alarmData.weekday = now.weekday; // Jeśli RTC udostępnia dzień tygodnia
-}
-
 void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 {
-//	RTC_TimeTypeDef now;
-//	RTC_ReadTime(&now);
-//
-//	// Ustawiamy alarm na "dzisiejszą" datę, godz. 12:30:00
-//	alarmData.day   = now.day;
-//	alarmData.month = now.month;
-//	alarmData.year  = now.year; // np. 25 oznacza 2025, zależnie od RTC
-//	alarmData.hour  = 19;
-//	alarmData.minute   = 58;
-//	alarmData.second   = 0;
-
-	// Wyświetlamy np. w pierwszym wierszu SET, w drugim BACK
+	// Wyświetlamy w pierwszym wierszu SET, w drugim BACK
     Lcd_clear(lcd);
 
     char row0[17];
@@ -323,6 +292,39 @@ void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t setIndex, bool blinkOn)
                 row1[7] = ' ';
                 break;
         }
+    }
+
+    // Wyświetlamy
+    Lcd_cursor(lcd, 0, 0);
+    Lcd_string(lcd, row0);
+    Lcd_cursor(lcd, 1, 0);
+    Lcd_string(lcd, row1);
+}
+
+void DisplayAlarmTriggered(Lcd_HandleTypeDef *lcd, int8_t subIndex)
+{
+    Lcd_clear(lcd);
+
+    char row0[17];
+    char row1[17];
+    memset(row0, ' ', 16);
+    memset(row1, ' ', 16);
+    row0[16] = '\0';
+    row1[16] = '\0';
+
+    // W pierwszej linii od piątego znaku: "ALARM!"
+    snprintf(row0 + 5, sizeof(row0) - 5, "ALARM!");
+
+    // W drugiej linii mamy 2 opcje: STOP i SNOOZE.
+    // Jeśli subIndex == 0, to '>' stoi przy STOP.
+    // Jeśli subIndex == 1, to '>' stoi przy SNOOZE.
+    if (subIndex == 0)
+    {
+        snprintf(row1, sizeof(row1), ">STOP   SNOOZE");
+    }
+    else
+    {
+        snprintf(row1, sizeof(row1), " STOP  >SNOOZE");
     }
 
     // Wyświetlamy

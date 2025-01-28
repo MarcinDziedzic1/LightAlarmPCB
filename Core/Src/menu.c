@@ -13,6 +13,8 @@ MenuState gState = MENU_STATE;  // start w głównym menu
 int8_t menuIndex = 0;
 int8_t currentSubMenuIndex = 0;
 int8_t alarmSetIndex = 0;      // 0=day,1=month,2=year,3=hour,4=min,5=sec
+int8_t lightSensorMode = 2; // 1=ON, 2=OFF
+int8_t sensorSubIndex;
 
 int usb_OnOff   = 1;  // 1=ON, 2=OFF
 int usb2_OnOff   = 1;  // 1=ON, 2=OFF
@@ -284,8 +286,7 @@ void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_On
 
 void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 {
-	// Wyświetlamy w pierwszym wierszu SET, w drugim BACK
-
+    // Przygotuj bufor dla 2 wierszy po 16 znaków (+ 1 na terminator)
     char row0[17];
     char row1[17];
     memset(row0, ' ', 16);
@@ -293,23 +294,48 @@ void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
     row0[16] = '\0';
     row1[16] = '\0';
 
-    // SET
+    // subIndex = 0 => >SET ... LSensor
+    // subIndex = 1 =>  SET ... >LSensor
+    // subIndex = 2 =>  SET ... LSensor  (w dolnym wierszu => >BACK)
+
     if (subIndex == 0)
-        snprintf(row0, sizeof(row0), ">SET      ");
+    {
+        // Górna linia: >SET ... LSensor
+        // np. ">SET     LSensor"
+        snprintf(row0, sizeof(row0), ">SET    LSensor");
+    }
+    else if (subIndex == 1)
+    {
+        // Górna linia:  SET  ... >LSensor
+        // np. " SET    >LSensor"
+        snprintf(row0, sizeof(row0), " SET   >LSensor");
+    }
     else
-        snprintf(row0, sizeof(row0), " SET      ");
+    {
+        // subIndex == 2
+        // Górna linia:  SET     LSensor  (bez >)
+        snprintf(row0, sizeof(row0), " SET    LSensor");
+    }
 
-    // BACK
-    if (subIndex == 1)
-        snprintf(row1, sizeof(row1), ">BACK     ");
+    // Dolny wiersz
+    // Jeśli subIndex=2 => >BACK; w pozostałych przypadkach: " BACK"
+    if (subIndex == 2)
+    {
+        snprintf(row1, sizeof(row1), ">BACK   ");
+    }
     else
-        snprintf(row1, sizeof(row1), " BACK     ");
+    {
+        snprintf(row1, sizeof(row1), " BACK   ");
+    }
 
+    // Wyświetlamy
     Lcd_cursor(lcd, 0, 0);
     Lcd_string(lcd, row0);
+
     Lcd_cursor(lcd, 1, 0);
     Lcd_string(lcd, row1);
 }
+
 
 void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t setIndex, bool blinkOn)
 {
@@ -318,7 +344,7 @@ void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t setIndex, bool blinkOn)
     // 1. Przygotowujemy stringi do wyświetlenia
     // Górny wiersz: "DD/MM/YYYY"
     char row0[17];
-    snprintf(row0, sizeof(row0), "%02d/%02d/%04d",
+    snprintf(row0, sizeof(row0), "%02d/%02d/%04d      ",
              alarmData.day, alarmData.month, 2000 + alarmData.year);
 
     // Dolny wiersz: "HH:MM:SS"

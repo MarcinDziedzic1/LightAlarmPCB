@@ -10,13 +10,14 @@
 // ----- Definicja stanów -----
 typedef enum {
     MENU_STATE,             // przeglądanie głównego menu
-    OPTION_STATE,           // wybrano jedną z opcji ENTER/EXIT
+    OPTION_STATE,           // wybrano jedną z opcji "ENTER" / "EXIT"
     SUBMENU_2, 		        // sub-menu USB1
 	SUBMENU_2B,		        // sub-menu USB2
     SUBMENU_L_BULB,         // sub-menu lampki
-	SUBMENU_ALARM,          // Nowy sub-menu: "SET" / "BACK"
+	SUBMENU_ALARM,          // sub-menu: "SET" / "L_SENSOR" / "BACK"
 	SUBMENU_ALARM_SET,		// sub-menu do ustawiania alarmu
-	ALARM_TRIGGERED 		// menu wyświetlane przy wywołaniu alarmu
+	ALARM_TRIGGERED,		// menu wyświetlane przy wywołaniu alarmu
+	SUBMENU_ALARM_LSENSOR	// sub-menu obsługi czujnika światła przy wywołaniu alarmu
 } MenuState;
 
 

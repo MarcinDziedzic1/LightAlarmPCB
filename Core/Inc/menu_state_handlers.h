@@ -24,6 +24,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
+void HandleSubMenuAlarmLSensorState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 
 #ifdef __cplusplus
 }

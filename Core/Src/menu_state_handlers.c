@@ -364,6 +364,10 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
 {
     extern uint32_t lastEncMove;
     extern uint32_t lastBtnPress;
+    extern int8_t lightSensorMode; // 1=ON, 2=OFF
+    extern int8_t sensorSubIndex;
+
+    // Zakładam, że globalnie mamy: static int8_t currentSubMenuIndex = 0; (lub w inny sposób)
 
     // Obrót enkodera
     if (val == 0 || val == 1)
@@ -371,15 +375,15 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         if ((now - lastEncMove) >= 500)
         {
             lastEncMove = now;
-            if (val == 0)
+            if (val == 0) // enkoder w lewo
             {
-            	currentSubMenuIndex--;
-                if (currentSubMenuIndex < 0) currentSubMenuIndex = 1;
+                currentSubMenuIndex--;
+                if (currentSubMenuIndex < 0) currentSubMenuIndex = 2; // zawinięcie do 2
             }
-            else
+            else // enkoder w prawo
             {
-            	currentSubMenuIndex++;
-                if (currentSubMenuIndex > 1) currentSubMenuIndex = 0;
+                currentSubMenuIndex++;
+                if (currentSubMenuIndex > 2) currentSubMenuIndex = 0; // zawinięcie do 0
             }
             DisplayAlarmMenu(lcd, currentSubMenuIndex);
         }
@@ -392,18 +396,27 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         lastBtnPress = now;
         switch(currentSubMenuIndex)
         {
-        case 0: // SET
+        case 0: // SET => przejście do stanu ustawiania czasu alarmu
             alarmSetIndex = 0;
             gState = SUBMENU_ALARM_SET;
             DisplayAlarmSet(lcd, alarmSetIndex, true);
             break;
-        case 1: // BACK
+
+        case 1: // L_Sensor => przejście do nowego stanu
+            // np. SUBMENU_ALARM_LSENSOR
+            gState = SUBMENU_ALARM_LSENSOR;
+            sensorSubIndex = 0;  // (zainicjuj subIndex)
+            DisplaySubMenuON_OFF(lcd, sensorSubIndex, lightSensorMode);
+            break;
+
+        case 2: // BACK => powrót do głównego menu
             gState = MENU_STATE;
             Menu_Display(lcd, menuIndex, true);
             break;
         }
     }
 }
+
 
 /**
  * @brief Obsługa stanu SUBMENU_ALARM_SET – edycja (day, month, year, hour, min, sec).
@@ -516,11 +529,9 @@ static void UpdateAlarmRow1(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
 {
     extern bool alarmIsActive;
+    extern bool skipLamp; // jeśli true => pomijamy włączenie lampy
     extern uint32_t lastEncMove;
     extern uint32_t lastBtnPress;
-
-    // Który element jest wybrany: 0=STOP, 1=SNOOZE
-    static int8_t currentSubMenuIndex = 0;
 
     // Zapamiętujemy „stary” subIndex, żeby wykryć zmianę
     static int8_t oldSubMenuIndex = -1;
@@ -529,15 +540,19 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     static bool firstCall = true;
 
     // Jeśli lampa jest wyłączona, włącz i zrób fade-in (tylko raz)
-    if (l_BulbOnOff == 2)
-    {
-        l_BulbOnOff = 1;
-        LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
-    }
+    if (l_BulbOnOff == 2) // lampka jest wyłączona
+        {
+            if (!skipLamp)
+            {
+                l_BulbOnOff = 1; // włączona
+                LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
+            }
+        }
 
     // 1. Pierwsze wejście w stan -> rysujemy ALARM! (wiersz 0) i wiersz 1
     if (firstCall)
     {
+    	currentSubMenuIndex = 0;
         // Rysujemy cały ekran alarmu
         // (bez Lcd_clear – w samej funkcji DisplayAlarmTriggered)
         DisplayAlarmTriggered(lcd, currentSubMenuIndex);
@@ -575,9 +590,11 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         if (currentSubMenuIndex == 0)
         {
             // STOP -> wyłącz lampę
-            l_BulbOnOff = 2;
-            LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
-
+        	if (l_BulbOnOff == 1)
+        	{
+        		l_BulbOnOff = 2;
+            	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+        	}
             alarmIsActive = false;
             // Przy wyjściu ze stanu -> zresetuj firstCall, by kolejnym
             // razem znowu wyświetlić „ALARM!”
@@ -600,8 +617,12 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                     alarmData.day += 1;
                 }
             }
-            l_BulbOnOff = 2;
-            LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            if (l_BulbOnOff == 1)
+            {
+            	l_BulbOnOff = 2;
+            	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            }
+
 
             alarmIsActive = false;
             firstCall = true;
@@ -612,4 +633,62 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         return;
     }
 }
+
+void HandleSubMenuAlarmLSensorState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
+{
+    extern uint32_t lastEncMove;
+    extern uint32_t lastBtnPress;
+
+    extern int8_t lightSensorMode;
+    extern int8_t sensorSubIndex;  // 0=ON, 1=OFF, 2=BACK
+
+    // --- 1. Obsługa enkodera (góra/dół) ---
+    if (val == 0 || val == 1)
+    {
+        if ((now - lastEncMove) >= 350)
+        {
+            lastEncMove = now;
+            if (val == 0) // W lewo
+            {
+                sensorSubIndex--;
+                if (sensorSubIndex < 0) sensorSubIndex = 2;
+            }
+            else // W prawo
+            {
+                sensorSubIndex++;
+                if (sensorSubIndex > 2) sensorSubIndex = 0;
+            }
+            DisplaySubMenuON_OFF(lcd, sensorSubIndex, lightSensorMode);
+        }
+    }
+
+    // --- 2. Obsługa przycisku (zatwierdzenie) ---
+    bool pressed = CheckDebouncedButton();
+    if (pressed && ((now - lastBtnPress) >= 500))
+    {
+        lastBtnPress = now;
+
+        switch(sensorSubIndex)
+        {
+        case 0: // ON
+            lightSensorMode = 1;
+            DisplaySubMenuON_OFF(lcd, sensorSubIndex, lightSensorMode);
+            // Zostajemy w tym samym submenu,
+            // dopóki user nie wybierze BACK
+            break;
+
+        case 1: // OFF
+            lightSensorMode = 2;
+            DisplaySubMenuON_OFF(lcd, sensorSubIndex, lightSensorMode);
+            // Podobnie, zostajemy w tym samym submenu
+            break;
+
+        case 2: // BACK
+            gState = SUBMENU_ALARM; // wracamy do menu alarmu
+            DisplayAlarmMenu(lcd, currentSubMenuIndex);
+            break;
+        }
+    }
+}
+
 

@@ -177,6 +177,9 @@ int main(void)
       case ALARM_TRIGGERED:
           HandleAlarmTriggered(val, now, &lcd);
           break;
+      case SUBMENU_ALARM_LSENSOR:
+    	  HandleSubMenuAlarmLSensorState(val, now, &lcd);
+    	  break;
       default:
           // Nieznany stan (ewentualny fallback)
           break;

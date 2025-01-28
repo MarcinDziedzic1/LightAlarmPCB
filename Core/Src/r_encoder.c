@@ -1,3 +1,5 @@
+// Created by: Marcin Dziedzic
+// r_encoder.c
 #include "r_encoder.h"
 
 /**

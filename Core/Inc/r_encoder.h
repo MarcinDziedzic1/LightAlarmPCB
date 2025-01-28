@@ -1,3 +1,6 @@
+// Created by: Marcin Dziedzic
+// r_encoder.h
+
 #ifndef R_ENCODER_H
 #define R_ENCODER_H
 

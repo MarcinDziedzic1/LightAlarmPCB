@@ -1,3 +1,6 @@
+// Created by: Marcin Dziedzic
+// RTC.h
+
 #ifndef RTC_H
 #define RTC_H
 

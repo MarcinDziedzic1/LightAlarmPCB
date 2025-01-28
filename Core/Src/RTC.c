@@ -1,5 +1,7 @@
+// Created by: Marcin Dziedzic
+// RTC.c
+
 #include "RTC.h"
-#include <stdio.h> // opcjonalnie do debug/printf
 
 /*
    PCF85063AT (obudowa SO8) ma 7-bitowy adres 0x51.

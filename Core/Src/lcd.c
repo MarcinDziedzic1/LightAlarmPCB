@@ -1,85 +1,115 @@
-/*
- * lcd.c
- *
- *  Created on: 10/06/2018
- *      Author: Olivier Van den Eede
- */
+// Created by: Marcin Dziedzic
+// lcd.c
 
 #include "lcd.h"
-const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
-const uint8_t ROW_20[] = {0x00, 0x40, 0x14, 0x54};
-/************************************** Static declarations **************************************/
 
+/**
+ * @brief Tabela adresów początkowych wierszy dla LCD 16-znakowego.
+ */
+const uint8_t ROW_16[] = {0x00, 0x40, 0x10, 0x50};
+
+/**
+ * @brief Tabela adresów początkowych wierszy dla LCD 20-znakowego.
+ */
+const uint8_t ROW_20[] = {0x00, 0x40, 0x14, 0x54};
+
+/* ======================== Deklaracje funkcji statycznych ======================== */
+
+/**
+ * @brief Zapis bajtu danych do rejestru danych LCD.
+ */
 static void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data);
+
+/**
+ * @brief Zapis bajtu do rejestru poleceń LCD.
+ */
 static void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command);
+
+/**
+ * @brief Wystawienie określonej liczby bitów na magistralę danych i impuls linii EN.
+ */
 static void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len);
 
 
-/************************************** Function definitions **************************************/
+/* ======================== Implementacje funkcji publicznych ======================== */
 
 /**
- * Create new Lcd_HandleTypeDef and initialize the Lcd
+ * @brief Tworzy uchwyt LCD (Lcd_HandleTypeDef) i wywołuje jego inicjalizację.
+ * @param port[]   Tablica portów dla linii danych.
+ * @param pin[]    Tablica pinów dla linii danych.
+ * @param rs_port  Port linii RS.
+ * @param rs_pin   Pin linii RS.
+ * @param en_port  Port linii Enable.
+ * @param en_pin   Pin linii Enable.
+ * @param mode     Tryb pracy (4- lub 8-bitowy).
+ * @return         Struktura Lcd_HandleTypeDef z ustawionymi parametrami.
  */
 Lcd_HandleTypeDef Lcd_create(
-		Lcd_PortType port[], Lcd_PinType pin[],
-		Lcd_PortType rs_port, Lcd_PinType rs_pin,
-		Lcd_PortType en_port, Lcd_PinType en_pin, Lcd_ModeTypeDef mode)
+    Lcd_PortType port[],
+    Lcd_PinType pin[],
+    Lcd_PortType rs_port,
+    Lcd_PinType rs_pin,
+    Lcd_PortType en_port,
+    Lcd_PinType en_pin,
+    Lcd_ModeTypeDef mode)
 {
-	Lcd_HandleTypeDef lcd;
+    Lcd_HandleTypeDef lcd;
 
-	lcd.mode = mode;
+    lcd.mode      = mode;
+    lcd.en_pin    = en_pin;
+    lcd.en_port   = en_port;
+    lcd.rs_pin    = rs_pin;
+    lcd.rs_port   = rs_port;
+    lcd.data_pin  = pin;
+    lcd.data_port = port;
 
-	lcd.en_pin = en_pin;
-	lcd.en_port = en_port;
-
-	lcd.rs_pin = rs_pin;
-	lcd.rs_port = rs_port;
-
-	lcd.data_pin = pin;
-	lcd.data_port = port;
-
-	Lcd_init(&lcd);
-
-	return lcd;
+    Lcd_init(&lcd);
+    return lcd;
 }
 
 /**
- * Initialize 16x2-lcd without cursor
+ * @brief Inicjalizuje wyświetlacz LCD, domyślnie wyłącza kursor.
+ * @param lcd Wskaźnik do struktury Lcd_HandleTypeDef.
  */
 void Lcd_init(Lcd_HandleTypeDef * lcd)
 {
-	if(lcd->mode == LCD_4_BIT_MODE)
-	{
-			lcd_write_command(lcd, 0x33);
-			lcd_write_command(lcd, 0x32);
-			lcd_write_command(lcd, FUNCTION_SET | OPT_N);				// 4-bit mode
-	}
-	else
-		lcd_write_command(lcd, FUNCTION_SET | OPT_DL | OPT_N);
+    if (lcd->mode == LCD_4_BIT_MODE)
+    {
+        lcd_write_command(lcd, 0x33);
+        lcd_write_command(lcd, 0x32);
+        lcd_write_command(lcd, FUNCTION_SET | OPT_N);  // Tryb 4-bit
+    }
+    else
+    {
+        lcd_write_command(lcd, FUNCTION_SET | OPT_DL | OPT_N); // Tryb 8-bit
+    }
 
-
-	lcd_write_command(lcd, CLEAR_DISPLAY);						// Clear screen
-	lcd_write_command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D);		// Lcd-on, cursor-off, no-blink
-	lcd_write_command(lcd, ENTRY_MODE_SET | OPT_INC);			// Increment cursor
+    lcd_write_command(lcd, CLEAR_DISPLAY);                   // Czyszczenie ekranu
+    lcd_write_command(lcd, DISPLAY_ON_OFF_CONTROL | OPT_D);  // LCD włączony, kursor wyłączony, brak migania
+    lcd_write_command(lcd, ENTRY_MODE_SET | OPT_INC);         // Inkrementacja kursora
 }
 
 /**
- * Write a number on the current position
+ * @brief Wypisuje liczbę całkowitą na bieżącej pozycji kursora.
+ * @param lcd    Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param number Liczba całkowita do wyświetlenia.
  */
 void Lcd_int(Lcd_HandleTypeDef * lcd, int number)
 {
-	char buffer[11];
-	sprintf(buffer, "%d", number);
-
-	Lcd_string(lcd, buffer);
+    char buffer[11];
+    sprintf(buffer, "%d", number);
+    Lcd_string(lcd, buffer);
 }
 
 /**
- * Write a string on the current position
+ * @brief Wyświetla liczbę zmiennoprzecinkową z zadaną precyzją po przecinku.
+ * @param lcd      Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param value    Wartość typu float do wyświetlenia.
+ * @param decimals Liczba cyfr po przecinku.
  */
 void Lcd_printFloat(Lcd_HandleTypeDef* lcd, float value, uint8_t decimals)
 {
-    // Znak + czy -
+    // Obsługa znaku
     if (value < 0.0f)
     {
         Lcd_string(lcd, "-");
@@ -88,117 +118,135 @@ void Lcd_printFloat(Lcd_HandleTypeDef* lcd, float value, uint8_t decimals)
 
     // Część całkowita
     int32_t intPart = (int32_t)value;
-    // Wyświetlamy część całkowitą np. przez sprintf ze zwykłym "%d"
     char buffer[16];
     sprintf(buffer, "%ld", (long)intPart);
     Lcd_string(lcd, buffer);
 
-    // Separator dziesiętny
+    // Separator (kropka)
     Lcd_string(lcd, ".");
 
-    // Część po przecinku
+    // Część ułamkowa
     float fractional = value - (float)intPart;
     while (decimals--)
     {
         fractional *= 10.0f;
     }
-    int32_t fracPart = (int32_t)(fractional + 0.5f);  // zaokrąglenie
-
+    int32_t fracPart = (int32_t)(fractional + 0.5f); // Zaokrąglenie
     sprintf(buffer, "%ld", (long)fracPart);
     Lcd_string(lcd, buffer);
 }
 
-
-
+/**
+ * @brief Wypisuje łańcuch znaków na LCD od bieżącej pozycji kursora.
+ * @param lcd    Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param string Łańcuch znaków zakończony '\0'.
+ */
 void Lcd_string(Lcd_HandleTypeDef * lcd, char * string)
 {
-	for(uint8_t i = 0; i < strlen(string); i++)
-	{
-		lcd_write_data(lcd, string[i]);
-	}
+    for (uint8_t i = 0; i < strlen(string); i++)
+    {
+        lcd_write_data(lcd, string[i]);
+    }
 }
 
 /**
- * Set the cursor position
+ * @brief Ustawia kursor w określonym wierszu i kolumnie.
+ * @param lcd Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param row Numer wiersza (0-based).
+ * @param col Numer kolumny (0-based).
  */
 void Lcd_cursor(Lcd_HandleTypeDef * lcd, uint8_t row, uint8_t col)
 {
-	#ifdef LCD20xN
-	lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_20[row] + col);
-	#endif
+#ifdef LCD20xN
+    lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_20[row] + col);
+#endif
 
-	#ifdef LCD16xN
-	lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
-	#endif
+#ifdef LCD16xN
+    lcd_write_command(lcd, SET_DDRAM_ADDR + ROW_16[row] + col);
+#endif
 }
 
 /**
- * Clear the screen
+ * @brief Czyści wyświetlacz LCD.
+ * @param lcd Wskaźnik do struktury Lcd_HandleTypeDef.
  */
-void Lcd_clear(Lcd_HandleTypeDef * lcd) {
-	lcd_write_command(lcd, CLEAR_DISPLAY);
-}
-
-void Lcd_define_char(Lcd_HandleTypeDef * lcd, uint8_t code, uint8_t bitmap[]){
-	lcd_write_command(lcd, SETCGRAM_ADDR + (code << 3));
-	for(uint8_t i=0;i<8;++i){
-		lcd_write_data(lcd, bitmap[i]);
-	}
-
-}
-
-
-/************************************** Static function definition **************************************/
-
-/**
- * Write a byte to the command register
- */
-void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command)
+void Lcd_clear(Lcd_HandleTypeDef * lcd)
 {
-	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_COMMAND_REG);		// Write to command register
-
-	if(lcd->mode == LCD_4_BIT_MODE)
-	{
-		lcd_write(lcd, (command >> 4), LCD_NIB);
-		lcd_write(lcd, command & 0x0F, LCD_NIB);
-	}
-	else
-	{
-		lcd_write(lcd, command, LCD_BYTE);
-	}
-
+    lcd_write_command(lcd, CLEAR_DISPLAY);
 }
 
 /**
- * Write a byte to the data register
+ * @brief Definiuje własny znak w CGRAM na podstawie tablicy 8 bajtów.
+ * @param lcd    Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param code   Kod znaku (0..7).
+ * @param bitmap Tablica bajtów opisująca kształt.
  */
-void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data)
+void Lcd_define_char(Lcd_HandleTypeDef * lcd, uint8_t code, uint8_t bitmap[])
 {
-	HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_DATA_REG);			// Write to data register
+    lcd_write_command(lcd, SETCGRAM_ADDR + (code << 3));
+    for (uint8_t i = 0; i < 8; ++i)
+    {
+        lcd_write_data(lcd, bitmap[i]);
+    }
+}
 
-	if(lcd->mode == LCD_4_BIT_MODE)
-	{
-		lcd_write(lcd, data >> 4, LCD_NIB);
-		lcd_write(lcd, data & 0x0F, LCD_NIB);
-	}
-	else
-	{
-		lcd_write(lcd, data, LCD_BYTE);
-	}
 
+/* ======================== Implementacje funkcji statycznych ======================== */
+
+/**
+ * @brief Zapis bajtu do rejestru poleceń LCD (RS=0).
+ * @param lcd     Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param command Wartość polecenia.
+ */
+static void lcd_write_command(Lcd_HandleTypeDef * lcd, uint8_t command)
+{
+    HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_COMMAND_REG);
+
+    if (lcd->mode == LCD_4_BIT_MODE)
+    {
+        lcd_write(lcd, (command >> 4), LCD_NIB);
+        lcd_write(lcd, command & 0x0F, LCD_NIB);
+    }
+    else
+    {
+        lcd_write(lcd, command, LCD_BYTE);
+    }
 }
 
 /**
- * Set len bits on the bus and toggle the enable line
+ * @brief Zapis bajtu do rejestru danych LCD (RS=1).
+ * @param lcd  Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param data Bajt danych do wyświetlenia.
  */
-void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len)
+static void lcd_write_data(Lcd_HandleTypeDef * lcd, uint8_t data)
 {
-	for(uint8_t i = 0; i < len; i++)
-	{
-		HAL_GPIO_WritePin(lcd->data_port[i], lcd->data_pin[i], (data >> i) & 0x01);
-	}
+    HAL_GPIO_WritePin(lcd->rs_port, lcd->rs_pin, LCD_DATA_REG);
 
-	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 1);
-	DELAY(1);
-	HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 0); 		// Data receive on falling edge
+    if (lcd->mode == LCD_4_BIT_MODE)
+    {
+        lcd_write(lcd, data >> 4, LCD_NIB);
+        lcd_write(lcd, data & 0x0F, LCD_NIB);
+    }
+    else
+    {
+        lcd_write(lcd, data, LCD_BYTE);
+    }
+}
+
+/**
+ * @brief Wystawia określoną liczbę bitów na linie danych i generuje impuls na linii EN.
+ * @param lcd  Wskaźnik do struktury Lcd_HandleTypeDef.
+ * @param data Dane do wystawienia.
+ * @param len  Długość (4 lub 8 bitów).
+ */
+static void lcd_write(Lcd_HandleTypeDef * lcd, uint8_t data, uint8_t len)
+{
+    for (uint8_t i = 0; i < len; i++)
+    {
+        HAL_GPIO_WritePin(lcd->data_port[i], lcd->data_pin[i], (data >> i) & 0x01);
+    }
+
+    HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 1);
+    DELAY(1);
+    HAL_GPIO_WritePin(lcd->en_port, lcd->en_pin, 0); // Zapis danych przy opadającym zboczu
 }

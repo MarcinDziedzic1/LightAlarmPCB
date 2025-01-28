@@ -1,3 +1,6 @@
+// Created by: Marcin Dziedzic
+// alarm.c
+
 #include "menu.h"
 #include <string.h>
 #include <stdio.h>
@@ -7,99 +10,85 @@
 #include "menu_state_handlers.h"
 #include "lcd.h"
 
+// Zewnętrzne deklaracje timerów, wyświetlacza, i2c
 extern TIM_HandleTypeDef htim3;
 extern Lcd_HandleTypeDef lcd;
 extern I2C_HandleTypeDef hi2c1;
 
-
-extern int l_BulbOnOff;  // 1 = ON, 2 = OFF
+// Zmienne globalne
+extern int l_BulbOnOff;         // 1 = ON, 2 = OFF
 extern int8_t currentSubMenuIndex;
 
 bool alarmIsActive = false;
-bool skipLamp = false;   // false = domyślnie włączymy lampę,
-                         // true = jest jasno => nie włączamy.
+bool skipLamp = false; // false = włączymy lampę, true = pominiemy ją (jest jasno)
 
-// Funkcja, która zakłada, że now i alarmData
-// są w tym samym dniu/miesiącu/roku.
-// Zwraca dodatnią wartość, jeśli alarm w przyszłości,
-// 0 jeśli aktualna sekunda == alarm sekunda,
-// ujemną jeśli alarm już minął.
+/**
+ * @brief Funkcja zakłada, że bieżący czas i struktura alarmData są w tym samym dniu.
+ *        Zwraca dodatnią wartość, jeśli alarm w przyszłości,
+ *        0 jeśli aktualna sekunda == alarm sekunda,
+ *        ujemną jeśli alarm już minął.
+ */
 int TimeDiffSec(const RTC_TimeTypeDef *now, const AlarmData *a)
 {
-    // Zamieniamy HH:MM:SS na liczbę sekund od północy
+    // Zamiana HH:MM:SS na całkowitą liczbę sekund od północy
     int nowSec   = now->hours   * 3600 + now->minutes   * 60 + now->seconds;
     int alarmSec = a->hour      * 3600 + a->minute      * 60 + a->second;
-
     return alarmSec - nowSec;
 }
+
 /**
  * @brief Sprawdza, czy aktualny czas RTC zgadza się z ustawionym alarmem.
- *        Jeśli tak – włącza lampkę (fade in).
+ *        Jeśli tak – ustawia stan ALARM_TRIGGERED.
  */
-
-
 void CheckAlarmTrigger(const RTC_TimeTypeDef *rtc_info)
 {
     extern bool alarmIsActive;
-    extern int  lightSensorMode;  // 1=ON (czujnik używany), 2=OFF (ignoruj czujnik)
-    extern bool skipLamp;         // flaga: czy pominąć włączenie lampki
+    extern int  lightSensorMode; // 1=ON (czujnik używany), 2=OFF (ignoruj czujnik)
+    extern bool skipLamp;
 
-    // Jeśli alarm już wyzwolony, to nic nie sprawdzaj
+    // Jeśli alarm już aktywny, nic nie robimy
     if (alarmIsActive) return;
 
-    // Sprawdzaj, czy day/month/year są takie same jak w alarmData
-    if ((rtc_info->day   == alarmData.day)   &&
+    // Sprawdzamy, czy dzień/miesiąc/rok zgadza się z ustawieniami alarmu
+    if ((rtc_info->day   == alarmData.day) &&
         (rtc_info->month == alarmData.month) &&
         (rtc_info->year  == alarmData.year))
     {
-        // Obliczamy różnicę czasu (sekund) do alarmu w obrębie bieżącej doby
+        // Różnica (w sekundach) między aktualnym czasem a alarmem
         int diff = TimeDiffSec(rtc_info, &alarmData);
 
-        // 1. Jeśli włączony czujnik światła i do alarmu zostało 15 sek
-        //    => czytamy czujnik i ustawiamy skipLamp w zależności od lux
+        // Jeśli włączony czujnik światła i do alarmu zostało 15 sek, mierzymy natężenie światła
         if (lightSensorMode == 1 && diff == 15)
         {
-            uint16_t lux = LightSen_ReadLux(&hi2c1); // przykładowy odczyt
-            if (lux > 100)
-            {
-                // jest wystarczająco jasno => pomijamy lampę
-                skipLamp = true;
-            }
-            else
-            {
-                skipLamp = false;
-            }
+            uint16_t lux = LightSen_ReadLux(&hi2c1);
+            skipLamp = (lux > 100) ? true : false;
         }
 
-        // 2. Jeśli diff == 0 => czas alarmu
+        // Jeśli diff == 0 -> czas alarmu
         if (diff == 0)
         {
-            // Alarm wyzwolony
             gState = ALARM_TRIGGERED;
             alarmIsActive = true;
-
-            // Nie ustawiamy tu lampy, bo zrobimy to w HandleAlarmTriggered,
-            // biorąc pod uwagę skipLamp.
         }
     }
 }
 
-
+/**
+ * @brief Funkcja ustawiająca domyślne parametry alarmu.
+ */
 void AlarmPreSet(void)
 {
-    // Odczyt aktualnego czasu z RTC
     RTC_TimeTypeDef now;
     RTC_ReadTime(&now);
 
-    // Ustawiamy alarm na dzisiejszą datę i określoną godzinę
-    alarmData.day = now.day;
-    alarmData.month = now.month;
-    alarmData.year = now.year; // np. 25 oznacza rok 2025 (zależnie od RTC)
-
-    alarmData.hour = 12;
+    // Ustawiamy alarm na dzisiejszą datę, godzina 12:30:00
+    alarmData.day    = now.day;
+    alarmData.month  = now.month;
+    alarmData.year   = now.year;
+    alarmData.hour   = 12;
     alarmData.minute = 30;
     alarmData.second = 0;
 
-    // Możemy ustawić dzień tygodnia, jeśli potrzebujemy go do logiki
-    alarmData.weekday = now.weekday; // Jeśli RTC udostępnia dzień tygodnia
+    // Można ustawić dzień tygodnia, jeśli RTC go przechowuje
+    alarmData.weekday = now.weekday;
 }

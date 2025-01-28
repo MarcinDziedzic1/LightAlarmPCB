@@ -1,3 +1,6 @@
+// Created by: Marcin Dziedzic
+// menu_state_handlers.h
+
 #ifndef MENU_STATE_HANDLERS_H
 #define MENU_STATE_HANDLERS_H
 
@@ -11,10 +14,9 @@ extern "C" {
 #include "RTC.h"
 #include <stdbool.h>
 
-
-/* ------------------------------------------------------------------
-   Prototypy funkcji obsługujących poszczególne stany:
-   ------------------------------------------------------------------ */
+/**
+ * @brief Prototypy funkcji obsługujących poszczególne stany menu.
+ */
 
 void HandleMenuState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);
 void HandleOptionState(int val, uint32_t now, Lcd_HandleTypeDef *lcd);

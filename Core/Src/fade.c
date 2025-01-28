@@ -1,9 +1,11 @@
+// Created by: Marcin Dziedzic
+// fade.c
+
 #include "fade.h"
 #include "stm32f1xx_hal.h"
 
 /**
- * @brief Funkcja wewnętrzna: ustawia wstępne parametry fade
- *        (ARR, stepInterval, PWM start).
+ * @brief Funkcja wewnętrzna inicjalizująca wspólne parametry fade.
  */
 static void LedFade_InternalInit(LedFadeHandle_t *handle,
                                  TIM_HandleTypeDef *htim,
@@ -13,40 +15,40 @@ static void LedFade_InternalInit(LedFadeHandle_t *handle,
                                  uint16_t steps,
                                  uint32_t totalTimeMs)
 {
-    handle->htim = htim;
-    handle->channel = channel;
-    handle->mode = mode;
-    handle->direction = direction;
-    handle->steps = steps;
-    handle->currentStep = 0;
-    handle->isActive = true;
+    handle->htim       = htim;
+    handle->channel    = channel;
+    handle->mode       = mode;
+    handle->direction  = direction;
+    handle->steps      = steps;
+    handle->currentStep= 0;
+    handle->isActive   = true;
 
-    // Odczytujemy AutoReload
+    // Odczyt wartości AutoReload (ARR)
     handle->arr = __HAL_TIM_GET_AUTORELOAD(htim);
 
-    // Obliczamy odstęp między krokami.
-    // Dla FADE_IN/FADE_OUT => totalTimeMs to czas jednego przejścia.
+    // Czas pomiędzy kolejnymi krokami
     handle->stepInterval = (totalTimeMs / steps);
+    handle->lastTime     = HAL_GetTick();
 
-    // Czas startu
-    handle->lastTime = HAL_GetTick();
-
-    // Uruchamiamy PWM, jeśli nie jest
+    // Uruchomienie PWM (o ile nie jest włączone)
     HAL_TIM_PWM_Start(htim, channel);
 
-    // W zależności od direction, ustawiamy wartość początkową.
-    // FADE_IN => start: CCR=arr (wyłączona), schodzimy do 0 (pełna jasność).
-    // FADE_OUT => start: CCR=0, idziemy do arr.
+    // Wartość początkowa CCR w zależności od kierunku
     if (direction == FADE_IN)
     {
+        // FADE_IN => start: CCR = ARR (wyłączona), dojdziemy do 0 (jasno)
         __HAL_TIM_SET_COMPARE(htim, channel, handle->arr);
     }
     else
     {
+        // FADE_OUT => start: CCR = 0, pójdziemy do ARR (zgaszenie)
         __HAL_TIM_SET_COMPARE(htim, channel, 0);
     }
 }
 
+/**
+ * @brief Rozpoczęcie pojedynczego rozjaśniania/przygaszania (FADE_MODE_SINGLE).
+ */
 void LedFade_Start(LedFadeHandle_t *handle,
                    TIM_HandleTypeDef *htim,
                    uint32_t channel,
@@ -54,7 +56,9 @@ void LedFade_Start(LedFadeHandle_t *handle,
                    uint16_t steps,
                    uint32_t totalTimeMs)
 {
-    LedFade_InternalInit(handle, htim, channel,
+    LedFade_InternalInit(handle,
+                         htim,
+                         channel,
                          FADE_MODE_SINGLE,
                          direction,
                          steps,
@@ -62,10 +66,7 @@ void LedFade_Start(LedFadeHandle_t *handle,
 }
 
 /**
- * @brief Uruchamia tryb pulsowania:
- *        najpierw FADE_IN (arr->0) w totalTimeMs,
- *        potem FADE_OUT (0->arr) w totalTimeMs,
- *        i tak w kółko.
+ * @brief Uruchamia tryb pulsowania: FADE_IN (ARR->0) i FADE_OUT (0->ARR) w kółko.
  */
 void LedFade_PulseStart(LedFadeHandle_t *handle,
                         TIM_HandleTypeDef *htim,
@@ -73,60 +74,61 @@ void LedFade_PulseStart(LedFadeHandle_t *handle,
                         uint16_t steps,
                         uint32_t totalTimeMs)
 {
-    LedFade_InternalInit(handle, htim, channel,
+    LedFade_InternalInit(handle,
+                         htim,
+                         channel,
                          FADE_MODE_PULSE,
-                         FADE_IN,  // startujemy od rozjaśniania
+                         FADE_IN,     // startujemy od rozjaśniania
                          steps,
                          totalTimeMs);
 }
 
 /**
- * @brief Funkcja, którą wywołujemy cyklicznie (np. w pętli głównej).
- *        Realizuje kolejne kroki rozjaśniania/przygaszania, bez blokowania.
- * @return true, jeśli FADE_MODE_SINGLE właśnie się zakończył,
- *         false - w przeciwnym wypadku.
+ * @brief Funkcja wywoływana cyklicznie (np. w pętli). Realizuje kolejne kroki fade.
+ * @return true, jeśli właśnie zakończono FADE_MODE_SINGLE, w przeciwnym razie false.
  */
 bool LedFade_Process(LedFadeHandle_t *handle)
 {
     if (!handle->isActive)
     {
-        return false; // nic się nie dzieje
+        return false; // Nic nie robimy, fade nieaktywny
     }
 
     uint32_t now = HAL_GetTick();
 
-    // Sprawdzamy, czy upłynął czas na kolejny krok
+    // Czy minął czas na kolejny krok?
     if ((now - handle->lastTime) < handle->stepInterval)
     {
         return false;
     }
 
-    // Zaktualizuj lastTime
+    // Aktualizacja "ostatniego" czasu
     handle->lastTime = now;
 
-    // Oblicz nowy CCR
+    // Obliczamy nowy CCR
     uint16_t newCompare = 0;
     if (handle->direction == FADE_IN)
     {
-        // currentStep=0 => CCR=arr; currentStep=steps => CCR=0
+        // FADE_IN: currentStep=0 => CCR=ARR; currentStep=steps => CCR=0
         newCompare = handle->arr
                      - (handle->currentStep * (handle->arr / handle->steps));
     }
-    else // FADE_OUT
+    else
     {
-        // currentStep=0 => CCR=0; currentStep=steps => CCR=arr
+        // FADE_OUT: currentStep=0 => CCR=0; currentStep=steps => CCR=ARR
         newCompare = (handle->currentStep * (handle->arr / handle->steps));
     }
 
+    // Ustawiamy CCR
     __HAL_TIM_SET_COMPARE(handle->htim, handle->channel, newCompare);
 
-    // Kolejny krok
+    // Następny krok
     handle->currentStep++;
 
-    // Czy doszliśmy do końca?
+    // Czy osiągnęliśmy koniec?
     if (handle->currentStep > handle->steps)
     {
-        // Ustaw ostateczną wartość
+        // Ustaw wartość docelową (dla pewności)
         if (handle->direction == FADE_IN)
         {
             __HAL_TIM_SET_COMPARE(handle->htim, handle->channel, 0);
@@ -136,15 +138,15 @@ bool LedFade_Process(LedFadeHandle_t *handle)
             __HAL_TIM_SET_COMPARE(handle->htim, handle->channel, handle->arr);
         }
 
-        // FADE_MODE_SINGLE -> kończymy
+        // Jeśli tryb pojedynczy -> kończymy
         if (handle->mode == FADE_MODE_SINGLE)
         {
             handle->isActive = false;
-            return true; // właśnie się zakończyło
+            return true;
         }
         else
         {
-            // FADE_MODE_PULSE -> zmieniamy kierunek i zaczynamy od 0.
+            // Tryb PULSE -> zmieniamy kierunek i zaczynamy od 0.
             if (handle->direction == FADE_IN)
             {
                 handle->direction = FADE_OUT;
@@ -154,9 +156,8 @@ bool LedFade_Process(LedFadeHandle_t *handle)
                 handle->direction = FADE_IN;
             }
             handle->currentStep = 0;
-            // Pomiń return true, bo w pulse chcemy ciągły cykl.
         }
     }
 
-    return false; // wciąż trwa lub pulsuje dalej
+    return false;
 }

@@ -31,9 +31,33 @@ uint16_t LightSen_ReadLux(I2C_HandleTypeDef *hi2c) {
  * @param lcd Wskaźnik do struktury LCD
  * @param lux Wartość natężenia światła w luksach
  */
-void LightSen_DisplayLux(Lcd_HandleTypeDef *lcd, uint16_t lux) {
-    char buffer[16];
-    sprintf(buffer, "Lux: %u lx", lux);
-    Lcd_clear(lcd);
-    Lcd_string(lcd, buffer);
+void LightSen_DisplayLux(Lcd_HandleTypeDef *lcd, uint16_t lux)
+{
+    // 1) Wyczyść drugi wiersz (16 spacji)
+    Lcd_cursor(lcd, 1, 0);
+    Lcd_string(lcd, "               "); // 16 spacji = wyczyszczenie
+
+    // 2) Bufor na wartość lux (max 5 cyfr + 1 znak \0)
+    char valStr[6];
+    sprintf(valStr, "%u", lux);
+
+    // 3) W kolumnie 0 wyświetl "Lux: "
+    Lcd_cursor(lcd, 0, 0);
+    Lcd_string(lcd, "Lux: ");
+
+    // 4) W kolumnie 5 wyświetl zmierzoną wartość lux
+    Lcd_cursor(lcd, 0, 5);
+    Lcd_string(lcd, valStr);
+
+    // (Opcjonalnie) Nadpisanie spacjami, jeśli nowa liczba jest krótsza
+    int len = strlen(valStr);
+    for (int i = len; i < 5; i++)
+    {
+        Lcd_cursor(lcd, 0, 5 + i);
+        Lcd_string(lcd, " ");
+    }
+
+    // 5) W kolumnie 10 zawsze wyświetl "lx"
+    Lcd_cursor(lcd, 0, 10);
+    Lcd_string(lcd, "lx");
 }

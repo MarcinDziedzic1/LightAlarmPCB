@@ -38,60 +38,132 @@ int menuCount = sizeof(menuItems) / sizeof(menuItems[0]);
  * @brief Wyświetla główne menu w trybie scrollowalnym (2 wiersze naraz).
  *        Wyróżnia jedną z tych dwóch pozycji zależnie od (index % 2).
  */
-void Menu_Display(Lcd_HandleTypeDef *lcd, uint8_t index)
+void Menu_Display(Lcd_HandleTypeDef *lcd, uint8_t index, bool forceRefresh)
 {
-    Lcd_clear(lcd);
+    // Zmienne statyczne, żeby pamiętać poprzednie wartości między wywołaniami
+    static uint8_t oldIndex = 255;  // lub inna wartość, która nie wystąpi normalnie
+    static uint8_t oldPage  = 255;
 
-    // Każda „strona” ma 2 elementy
-    // Strona = index / 2
-    uint8_t page = index / 2;
-    uint8_t firstItem  = page * 2;
+    // Bufory na wiersze LCD (po 16 znaków + terminator)
+    static char row0[17];
+    static char row1[17];
+
+    // Każda „strona” wyświetla 2 elementy: w wierszu 0 i w wierszu 1
+    uint8_t page = index / 2;         // np. index=0..1 => page=0; index=2..3 => page=1
+    uint8_t firstItem  = page * 2;    // np. page=0 => item0,1; page=1 => item2,3
     uint8_t secondItem = firstItem + 1;
 
-    // Bufory na 2 wiersze
-    char row0[17];
-    char row1[17];
-    memset(row0, ' ', 16);
-    memset(row1, ' ', 16);
-    row0[16] = '\0';
-    row1[16] = '\0';
-
-    // Wiersz 0 (firstItem)
-    if (firstItem < menuCount)
+    // Funkcja pomocnicza do pełnego odświeżenia ekranu
+    void RefreshWholePage(void)
     {
-        bool selected = ((index % 2) == 0);
-        if (selected)
-            snprintf(row0, sizeof(row0), ">%s", menuItems[firstItem]);
-        else
-            snprintf(row0, sizeof(row0), " %s", menuItems[firstItem]);
+        Lcd_clear(lcd);  // czyścimy cały ekran
+
+        // Przygotowujemy wiersze
+        memset(row0, ' ', 16);
+        memset(row1, ' ', 16);
+        row0[16] = '\0';
+        row1[16] = '\0';
+
+        // Wypełniamy row0
+        if (firstItem < menuCount)
+        {
+            bool selected = ((index % 2) == 0); // czy górny wiersz ma strzałkę?
+            if (selected)
+                snprintf(row0, sizeof(row0), ">%s", menuItems[firstItem]);
+            else
+                snprintf(row0, sizeof(row0), " %s", menuItems[firstItem]);
+        }
+
+        // Wypełniamy row1
+        if (secondItem < menuCount)
+        {
+            bool selected = ((index % 2) == 1); // czy dolny wiersz ma strzałkę?
+            if (selected)
+                snprintf(row1, sizeof(row1), ">%s", menuItems[secondItem]);
+            else
+                snprintf(row1, sizeof(row1), " %s", menuItems[secondItem]);
+        }
+
+        // Wyświetlamy wiersze
+        Lcd_cursor(lcd, 0, 0);
+        Lcd_string(lcd, row0);
+        Lcd_cursor(lcd, 1, 0);
+        Lcd_string(lcd, row1);
     }
 
-    // Wiersz 1 (secondItem)
-    if (secondItem < menuCount)
+    // 1. Jeśli forceRefresh == true -> wykonaj pełne odświeżenie
+    //    (np. właśnie wróciliśmy z innego menu)
+    if (forceRefresh)
     {
-        bool selected = ((index % 2) == 1);
-        if (selected)
-            snprintf(row1, sizeof(row1), ">%s", menuItems[secondItem]);
-        else
-            snprintf(row1, sizeof(row1), " %s", menuItems[secondItem]);
+        // Wymuszamy także reset poprzednich wartości, by uniknąć
+        // niepotrzebnych optymalizacji.
+        oldPage  = 255;
+        oldIndex = 255;
     }
 
-    // Wyświetlamy
-    Lcd_cursor(lcd, 0, 0);
-    Lcd_string(lcd, row0);
-    Lcd_cursor(lcd, 1, 0);
-    Lcd_string(lcd, row1);
+    // 2. Sprawdź, czy zmieniła się strona (page), albo to „pierwsze” wywołanie
+    if (page != oldPage)
+    {
+        // Tak -> pełne odświeżenie
+        RefreshWholePage();
+        oldPage  = page;
+        oldIndex = index;
+    }
+    else
+    {
+        // Ta sama strona, sprawdź, czy zmienił się index w obrębie tej strony
+        if (index != oldIndex)
+        {
+            // Z której linii przenosimy strzałkę?
+            uint8_t oldRow = (oldIndex % 2);
+            uint8_t newRow = (index % 2);
+
+            // Jeżeli „strzałka” (>) przenosi się z góry na dół, lub odwrotnie:
+            if (oldRow != newRow)
+            {
+                // Odśwież TYLKO row0 i row1, ale bez clear,
+                // tak by zmienić, gdzie stoi '>'
+                {
+                    memset(row0, ' ', 16);
+                    row0[16] = '\0';
+                    if (firstItem < menuCount)
+                    {
+                        bool selected = (newRow == 0);
+                        if (selected)
+                            snprintf(row0, sizeof(row0), ">%s", menuItems[firstItem]);
+                        else
+                            snprintf(row0, sizeof(row0), " %s", menuItems[firstItem]);
+                    }
+                    Lcd_cursor(lcd, 0, 0);
+                    Lcd_string(lcd, row0);
+                }
+                {
+                    memset(row1, ' ', 16);
+                    row1[16] = '\0';
+                    if (secondItem < menuCount)
+                    {
+                        bool selected = (newRow == 1);
+                        if (selected)
+                            snprintf(row1, sizeof(row1), ">%s", menuItems[secondItem]);
+                        else
+                            snprintf(row1, sizeof(row1), " %s", menuItems[secondItem]);
+                    }
+                    Lcd_cursor(lcd, 1, 0);
+                    Lcd_string(lcd, row1);
+                }
+            }
+            // Gdyby oldRow == newRow, tu nic nie robimy (to raczej się nie zdarza
+            // przy 2 elementach na stronę)
+            oldIndex = index;
+        }
+    }
 }
-
 /**
  * @brief Wyświetla zawartość wybranej opcji menu
  *        (np. TIME, SENSOR, USB1 => subMenu2, L_BULB => subMenuLB, itd.).
  */
 void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *hi2c)
 {
-    // Czyścimy LCD
-    Lcd_clear(lcd);
-
     // Tu decydujemy, co się stanie dla danej pozycji w menu.
     switch (index)
     {
@@ -158,8 +230,6 @@ void Menu_ShowOption(Lcd_HandleTypeDef *lcd, uint8_t index, I2C_HandleTypeDef *h
  */
 void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_OnOff)
 {
-    Lcd_clear(lcd);
-
     char row0[17];
     char row1[17];
     memset(row0, ' ', 16);
@@ -215,7 +285,6 @@ void DisplaySubMenuON_OFF(Lcd_HandleTypeDef *lcd, int8_t subIndex, int device_On
 void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 {
 	// Wyświetlamy w pierwszym wierszu SET, w drugim BACK
-    Lcd_clear(lcd);
 
     char row0[17];
     char row1[17];
@@ -226,15 +295,15 @@ void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 
     // SET
     if (subIndex == 0)
-        snprintf(row0, sizeof(row0), ">SET ");
+        snprintf(row0, sizeof(row0), ">SET      ");
     else
-        snprintf(row0, sizeof(row0), " SET ");
+        snprintf(row0, sizeof(row0), " SET      ");
 
     // BACK
     if (subIndex == 1)
-        snprintf(row1, sizeof(row1), ">BACK");
+        snprintf(row1, sizeof(row1), ">BACK     ");
     else
-        snprintf(row1, sizeof(row1), " BACK");
+        snprintf(row1, sizeof(row1), " BACK     ");
 
     Lcd_cursor(lcd, 0, 0);
     Lcd_string(lcd, row0);
@@ -244,59 +313,64 @@ void DisplayAlarmMenu(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 
 void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t setIndex, bool blinkOn)
 {
-    // Indeksy: 0=day,1=month,2=year,3=hour,4=min,5=sec
+    // Indeksy: 0=day,1=month,2=year,3=hour,4=minute,5=sec
 
-    Lcd_clear(lcd);
-
-    // Przygotowujemy stringi
-    // Górny: "DD/MM/YYYY"
+    // 1. Przygotowujemy stringi do wyświetlenia
+    // Górny wiersz: "DD/MM/YYYY"
     char row0[17];
-    snprintf(row0, sizeof(row0), "%02d/%02d/%04d", alarmData.day, alarmData.month, 2000 + alarmData.year);
+    snprintf(row0, sizeof(row0), "%02d/%02d/%04d",
+             alarmData.day, alarmData.month, 2000 + alarmData.year);
 
-    // Dolny: "HH:MM:SS"
+    // Dolny wiersz: "HH:MM:SS"
     char row1[17];
-    snprintf(row1, sizeof(row1), "%02d:%02d:%02d", alarmData.hour, alarmData.minute, alarmData.second);
+    snprintf(row1, sizeof(row1), "%02d:%02d:%02d",
+             alarmData.hour, alarmData.minute, alarmData.second);
 
-    // Jeśli blinkOn = false i akurat setIndex = 0 => chowamy "DD"
-    // Jeżeli setIndex=1 => chowamy "MM"
-    // itd.
+    // 2. Jeśli blinkOn = false, chowamy aktualnie edytowaną daną
+    //    (zamieniamy ją na spacje):
     if (!blinkOn)
     {
         switch(setIndex)
         {
             case 0: // day
+                // row0[0..1] to dwie cyfry "DD"
                 row0[0] = ' ';
                 row0[1] = ' ';
                 break;
             case 1: // month
+                // row0[3..4] to "MM"
                 row0[3] = ' ';
                 row0[4] = ' ';
                 break;
             case 2: // year
-                // row0[6..9], bo "DD/MM/YYYY" = 10 znaków
+                // row0[6..9] to "YYYY" (czyli np. 2025)
                 row0[6] = ' ';
                 row0[7] = ' ';
                 row0[8] = ' ';
                 row0[9] = ' ';
                 break;
             case 3: // hour
+                // row1[0..1] to "HH"
                 row1[0] = ' ';
                 row1[1] = ' ';
                 break;
-            case 4: // min
+            case 4: // minute
+                // row1[3..4] to "MM"
                 row1[3] = ' ';
                 row1[4] = ' ';
                 break;
-            case 5: // sec
+            case 5: // second
+                // row1[6..7] to "SS"
                 row1[6] = ' ';
                 row1[7] = ' ';
                 break;
         }
     }
 
-    // Wyświetlamy
+    // 3. Wyświetlamy (bez czyszczenia całego LCD)
     Lcd_cursor(lcd, 0, 0);
     Lcd_string(lcd, row0);
+
     Lcd_cursor(lcd, 1, 0);
     Lcd_string(lcd, row1);
 }

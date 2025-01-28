@@ -126,7 +126,7 @@ int main(void)
       LCD_4_BIT_MODE
   );
   // Na starcie wyświetlamy menu główne
-  Menu_Display(&lcd, menuIndex);
+  Menu_Display(&lcd, menuIndex, true);
   AlarmPreSet();
   /* USER CODE END 2 */
 

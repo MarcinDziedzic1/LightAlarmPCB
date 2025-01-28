@@ -103,7 +103,7 @@ void HandleMenuState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                 menuIndex++;
                 if (menuIndex >= menuCount) menuIndex = 0;
             }
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, false);
         }
         break;
 
@@ -166,7 +166,7 @@ void HandleOptionState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
-        Menu_Display(lcd, menuIndex);
+        Menu_Display(lcd, menuIndex, true);
         gState = MENU_STATE;
     }
     else
@@ -233,7 +233,7 @@ void HandleSubMenu2State(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             break;
         case 2: // BACK
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
             break;
         }
     }
@@ -292,7 +292,7 @@ void HandleSubMenu2BState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             break;
         case 2: // BACK
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
             break;
         }
     }
@@ -351,7 +351,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             break;
         case 2: // BACK
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
             break;
         }
     }
@@ -399,7 +399,7 @@ void HandleSubMenuAlarmState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             break;
         case 1: // BACK
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
             break;
         }
     }
@@ -417,7 +417,7 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     static bool blinkOn = true;
     static uint32_t lastBlink = 0;
 
-    // 1. Blink
+    // 1. Blink – co 500 ms odwracamy blinkOn i wywołujemy DisplayAlarmSet
     if (now - lastBlink >= 500)
     {
         blinkOn = !blinkOn;
@@ -425,7 +425,7 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         DisplayAlarmSet(lcd, alarmSetIndex, blinkOn);
     }
 
-    // 2. Obrót enkodera (zmiana wartości)
+    // 2. Obrót enkodera – zmiana wartości
     if (val == 0 || val == 1)
     {
         if ((now - lastEncMove) >= 350)
@@ -440,38 +440,44 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                 if (alarmData.day < 1)  alarmData.day = 31;
                 if (alarmData.day > 31) alarmData.day = 1;
                 break;
+
             case 1: // month
                 alarmData.month += dir;
                 if (alarmData.month < 1)  alarmData.month = 12;
                 if (alarmData.month > 12) alarmData.month = 1;
                 break;
+
             case 2: // year
                 alarmData.year += dir;
                 if (alarmData.year > 99) alarmData.year = 0;
                 if (alarmData.year < 0)  alarmData.year = 99;
                 break;
+
             case 3: // hour
                 alarmData.hour += dir;
                 if (alarmData.hour < 0)   alarmData.hour = 23;
                 if (alarmData.hour > 23)  alarmData.hour = 0;
                 break;
+
             case 4: // minute
                 alarmData.minute += dir;
-                if (alarmData.minute < 0)    alarmData.minute = 59;
-                if (alarmData.minute > 59)   alarmData.minute = 0;
+                if (alarmData.minute < 0)  alarmData.minute = 59;
+                if (alarmData.minute > 59) alarmData.minute = 0;
                 break;
+
             case 5: // second
                 alarmData.second += dir;
-                if (alarmData.second < 0)    alarmData.second = 59;
-                if (alarmData.second > 59)   alarmData.second = 0;
+                if (alarmData.second < 0)  alarmData.second = 59;
+                if (alarmData.second > 59) alarmData.second = 0;
                 break;
             }
-            // Odśwież wyświetlacz po zmianie
+
+            // Odśwież wyświetlacz po zmianie – z nowymi wartościami
             DisplayAlarmSet(lcd, alarmSetIndex, blinkOn);
         }
     }
 
-    // 3. Wciśnięcie przycisku (kolejne pole lub wyjście)
+    // 3. Wciśnięcie przycisku – przejście do kolejnego pola lub wyjście
     bool pressed = CheckDebouncedButton();
     if (pressed && ((now - lastBtnPress) >= 500))
     {
@@ -489,6 +495,7 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         }
     }
 }
+
 
 void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
 {
@@ -534,7 +541,7 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             alarmIsActive = false;
             displayDirty = true;
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
         }
         else
         {
@@ -555,7 +562,7 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             alarmIsActive = false;
             displayDirty = true;
             gState = MENU_STATE;
-            Menu_Display(lcd, menuIndex);
+            Menu_Display(lcd, menuIndex, true);
         }
         return; // bo wychodzimy ze stanu
     }

@@ -83,7 +83,7 @@ void DisplayAlarmTriggered(Lcd_HandleTypeDef *lcd, int8_t subIndex);
  * @param lcd   wskaźnik do struktury Lcd_HandleTypeDef
  * @param index aktualny menuIndex
  */
-void Menu_Display(Lcd_HandleTypeDef *lcd, uint8_t index);
+void Menu_Display(Lcd_HandleTypeDef *lcd, uint8_t index,  bool forceRefresh);
 
 /**
  * @brief Wyświetla zawartość wybranej opcji menu (np. TIME, SENSOR, SUBMENU_2, itp.).

@@ -49,6 +49,7 @@ I2C_HandleTypeDef hi2c1;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart2;
+LedFadeHandle_t g_fadeHandle;
 
 /* USER CODE BEGIN PV */
 /**
@@ -108,11 +109,13 @@ int main(void)
   MX_TIM1_Init();
   MX_I2C1_Init();
   MX_TIM3_Init();
-
   /* USER CODE BEGIN 2 */
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
+  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, htim3.Init.Period);
+  l_BulbOnOff = 2; // 2 = OFF
   // Inicjalizacje enkodera, LED fade, sensor itp.
   REncoder_Init(&henc, &htim1, GPIOC, GPIO_PIN_7);  // Przycisk enkodera = PC7
-  LedFade_Init(&htim3, TIM_CHANNEL_4);
+//  LedFade_Init(&htim3, TIM_CHANNEL_4);
   LightSen_Init(&hi2c1);
 
   // Inicjalizacja LCD
@@ -136,6 +139,7 @@ int main(void)
   while (1)
   {
 	  // --- Pętla główna ---
+	  LedFade_Process(&g_fadeHandle);
 
 	  // Odczyt obrotu i przycisku enkodera:
 	  int val = REncoder_Update(&henc);
@@ -186,7 +190,7 @@ int main(void)
       }
 
       // Niewielkie opóźnienie w pętli (debounce + odciążenie CPU)
-      HAL_Delay(50);
+      HAL_Delay(10);
   }
   /* USER CODE END WHILE */
   /* USER CODE BEGIN 3 */

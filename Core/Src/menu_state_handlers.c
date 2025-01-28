@@ -305,7 +305,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
 {
     extern uint32_t lastEncMove;
     extern uint32_t lastBtnPress;
-
+    extern LedFadeHandle_t g_fadeHandle;
     // Obrót enkodera
     if (val == 0 || val == 1)
     {
@@ -337,7 +337,10 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             if (l_BulbOnOff != 1)
             {
                 l_BulbOnOff = 1;
-                LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
+                LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
+                              FADE_IN,    // kierunek
+                              200,        // steps
+                              1000);
                 DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
             break;
@@ -345,7 +348,10 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             if (l_BulbOnOff != 2)
             {
                 l_BulbOnOff = 2;
-                LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+                LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
+                              FADE_OUT,    // kierunek
+                              200,        // steps
+                              1000);
                 DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
             break;
@@ -532,6 +538,7 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     extern bool skipLamp; // jeśli true => pomijamy włączenie lampy
     extern uint32_t lastEncMove;
     extern uint32_t lastBtnPress;
+    extern LedFadeHandle_t g_fadeHandle;
 
     // Zapamiętujemy „stary” subIndex, żeby wykryć zmianę
     static int8_t oldSubMenuIndex = -1;
@@ -545,7 +552,10 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             if (!skipLamp)
             {
                 l_BulbOnOff = 1; // włączona
-                LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
+                LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
+                              FADE_IN,    // kierunek
+                              200,        // steps
+                              1000);
             }
         }
 
@@ -593,7 +603,10 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         	if (l_BulbOnOff == 1)
         	{
         		l_BulbOnOff = 2;
-            	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+        		LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
+        		              FADE_OUT,    // kierunek
+        		              200,        // steps
+        		              1000);
         	}
             alarmIsActive = false;
             // Przy wyjściu ze stanu -> zresetuj firstCall, by kolejnym
@@ -620,7 +633,10 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             if (l_BulbOnOff == 1)
             {
             	l_BulbOnOff = 2;
-            	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            	LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
+            	              FADE_OUT,    // kierunek
+            	              200,        // steps
+            	              1000);
             }
 
 

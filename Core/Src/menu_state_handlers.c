@@ -532,7 +532,9 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             l_BulbOnOff = 2;
         	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
             alarmIsActive = false;
+            displayDirty = true;
             gState = MENU_STATE;
+            Menu_Display(lcd, menuIndex);
         }
         else
         {
@@ -551,7 +553,9 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             l_BulbOnOff = 2;
             LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
             alarmIsActive = false;
+            displayDirty = true;
             gState = MENU_STATE;
+            Menu_Display(lcd, menuIndex);
         }
         return; // bo wychodzimy ze stanu
     }

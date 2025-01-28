@@ -496,82 +496,120 @@ void HandleSubMenuAlarmSetState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     }
 }
 
+static void UpdateAlarmRow1(Lcd_HandleTypeDef *lcd, int8_t subIndex)
+{
+    char row1[17];
+    memset(row1, ' ', 16);
+    row1[16] = '\0';
+
+    if (subIndex == 0)
+        snprintf(row1, sizeof(row1), ">STOP   SNOOZE");
+    else
+        snprintf(row1, sizeof(row1), " STOP  >SNOOZE");
+
+    // Nadpisujemy TYLKO drugi wiersz
+    Lcd_cursor(lcd, 1, 0);
+    Lcd_string(lcd, row1);
+}
+
 
 void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
 {
-	extern bool alarmIsActive;
-	extern uint32_t lastEncMove;
-	extern uint32_t lastBtnPress;
-    static int8_t lastSubMenuIndex = -1;   // Przechowa poprzednią wartość
-    static bool displayDirty = true;       // Flaga: czy musimy prze-rysować?
+    extern bool alarmIsActive;
+    extern uint32_t lastEncMove;
+    extern uint32_t lastBtnPress;
 
+    // Który element jest wybrany: 0=STOP, 1=SNOOZE
+    static int8_t currentSubMenuIndex = 0;
+
+    // Zapamiętujemy „stary” subIndex, żeby wykryć zmianę
+    static int8_t oldSubMenuIndex = -1;
+
+    // Flaga: czy pierwszy raz wchodzimy w stan ALARM_TRIGGERED?
+    static bool firstCall = true;
+
+    // Jeśli lampa jest wyłączona, włącz i zrób fade-in (tylko raz)
     if (l_BulbOnOff == 2)
     {
-    	l_BulbOnOff = 1; // Włączona
-    	LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
+        l_BulbOnOff = 1;
+        LedFade_In(&htim3, TIM_CHANNEL_4, 100, 1000);
     }
 
-    // --- Obsługa enkodera ---
+    // 1. Pierwsze wejście w stan -> rysujemy ALARM! (wiersz 0) i wiersz 1
+    if (firstCall)
+    {
+        // Rysujemy cały ekran alarmu
+        // (bez Lcd_clear – w samej funkcji DisplayAlarmTriggered)
+        DisplayAlarmTriggered(lcd, currentSubMenuIndex);
+
+        firstCall = false;
+        // Zapamiętujemy, że wyświetliliśmy subIndex
+        oldSubMenuIndex = currentSubMenuIndex;
+    }
+
+    // 2. Obsługa enkodera
     if ((val == 0 || val == 1) && ((now - lastEncMove) >= 350))
     {
         lastEncMove = now;
-        // ... sprawdzasz czas, antydrgania itp.
         int dir = (val == 0) ? -1 : +1;
+
+        // Zmiana subIndex w zakresie 0..1
         currentSubMenuIndex += dir;
         if (currentSubMenuIndex < 0) currentSubMenuIndex = 1;
         if (currentSubMenuIndex > 1) currentSubMenuIndex = 0;
 
-        // Tylko jeśli indeks się faktycznie zmienił
-        if (currentSubMenuIndex != lastSubMenuIndex)
+        // Jeśli subIndex się zmienił -> odśwież TYLKO DRUGI wiersz
+        if (currentSubMenuIndex != oldSubMenuIndex)
         {
-            displayDirty = true; // zasygnalizuj potrzebę odświeżenia
+            UpdateAlarmRow1(lcd, currentSubMenuIndex);
+            oldSubMenuIndex = currentSubMenuIndex;
         }
     }
 
-    // --- Obsługa przycisku STOP / SNOOZE ---
+    // 3. Obsługa przycisku STOP / SNOOZE
     bool pressed = CheckDebouncedButton();
     if (pressed && ((now - lastBtnPress) >= 500))
     {
         lastBtnPress = now;
+
         if (currentSubMenuIndex == 0)
         {
-            // STOP -> wyłącz
+            // STOP -> wyłącz lampę
             l_BulbOnOff = 2;
-        	LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+            LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+
             alarmIsActive = false;
-            displayDirty = true;
+            // Przy wyjściu ze stanu -> zresetuj firstCall, by kolejnym
+            // razem znowu wyświetlić „ALARM!”
+            firstCall = true;
+
             gState = MENU_STATE;
             Menu_Display(lcd, menuIndex, true);
         }
         else
         {
-            // SNOOZE -> +5 min
+            // SNOOZE -> +5min
             alarmData.minute += 5;
             if (alarmData.minute >= 60)
             {
-            	alarmData.minute -= 60;
-            	alarmData.hour++;
-            	if (alarmData.hour > 23)
-            		{
-            		alarmData.hour = 0;
-            		alarmData.day += 1;
-            		}
+                alarmData.minute -= 60;
+                alarmData.hour++;
+                if (alarmData.hour > 23)
+                {
+                    alarmData.hour = 0;
+                    alarmData.day += 1;
+                }
             }
             l_BulbOnOff = 2;
             LedFade_Out(&htim3, TIM_CHANNEL_4, 100, 1000);
+
             alarmIsActive = false;
-            displayDirty = true;
+            firstCall = true;
+
             gState = MENU_STATE;
             Menu_Display(lcd, menuIndex, true);
         }
-        return; // bo wychodzimy ze stanu
-    }
-
-    // --- Rysowanie na LCD (tylko gdy "displayDirty == true") ---
-    if (displayDirty)
-    {
-        DisplayAlarmTriggered(lcd, currentSubMenuIndex);
-        lastSubMenuIndex = currentSubMenuIndex;
-        displayDirty = false;
+        return;
     }
 }
+

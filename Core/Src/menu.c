@@ -377,8 +377,7 @@ void DisplayAlarmSet(Lcd_HandleTypeDef *lcd, int8_t setIndex, bool blinkOn)
 
 void DisplayAlarmTriggered(Lcd_HandleTypeDef *lcd, int8_t subIndex)
 {
-    Lcd_clear(lcd);
-
+    // Bufory na dwie linie
     char row0[17];
     char row1[17];
     memset(row0, ' ', 16);
@@ -386,7 +385,8 @@ void DisplayAlarmTriggered(Lcd_HandleTypeDef *lcd, int8_t subIndex)
     row0[16] = '\0';
     row1[16] = '\0';
 
-    // W pierwszej linii od piątego znaku: "ALARM!"
+    // W pierwszej linii od 5. znaku: "ALARM!"
+    // (np. "     ALARM!")
     snprintf(row0 + 5, sizeof(row0) - 5, "ALARM!");
 
     // W drugiej linii mamy 2 opcje: STOP i SNOOZE.
@@ -401,9 +401,11 @@ void DisplayAlarmTriggered(Lcd_HandleTypeDef *lcd, int8_t subIndex)
         snprintf(row1, sizeof(row1), " STOP  >SNOOZE");
     }
 
-    // Wyświetlamy
+    // Wyświetlamy (bez czyszczenia całego LCD)
     Lcd_cursor(lcd, 0, 0);
     Lcd_string(lcd, row0);
+
     Lcd_cursor(lcd, 1, 0);
     Lcd_string(lcd, row1);
 }
+

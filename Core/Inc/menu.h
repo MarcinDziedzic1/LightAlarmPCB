@@ -21,13 +21,13 @@ typedef enum {
 
 
 typedef struct {
-    uint8_t day;        // Dzień (1-31)
-    uint8_t month;      // Miesiąc (1-12)
-    uint8_t year;       // Rok (0-99)
-    uint8_t hour;       // Godzina (0-23)
-    uint8_t minute;     // Minuta (0-59)
-    uint8_t second;     // Sekunda (0-59)
-    uint8_t weekday;    // Dzień tygodnia (0=Sunday, ..., 6=Saturday)
+    int8_t day;        // Dzień (1-31)
+    int8_t month;      // Miesiąc (1-12)
+    int8_t year;       // Rok (0-99)
+    int8_t hour;       // Godzina (0-23)
+    int8_t minute;     // Minuta (0-59)
+    int8_t second;     // Sekunda (0-59)
+    int8_t weekday;    // Dzień tygodnia (0=Sunday, ..., 6=Saturday)
 } AlarmData;
 
 extern AlarmData alarmData; // Globalna zmienna alarmu

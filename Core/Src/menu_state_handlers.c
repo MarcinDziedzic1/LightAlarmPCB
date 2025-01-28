@@ -339,7 +339,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                 l_BulbOnOff = 1;
                 LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
                               FADE_IN,    // kierunek
-                              200,        // steps
+                              100,        // steps
                               1000);
                 DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
@@ -350,7 +350,7 @@ void HandleSubMenuLBState(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                 l_BulbOnOff = 2;
                 LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
                               FADE_OUT,    // kierunek
-                              200,        // steps
+                              100,        // steps
                               1000);
                 DisplaySubMenuON_OFF(lcd, currentSubMenuIndex, l_BulbOnOff);
             }
@@ -551,11 +551,18 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         {
             if (!skipLamp)
             {
-                l_BulbOnOff = 1; // włączona
-                LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
-                              FADE_IN,    // kierunek
-                              200,        // steps
-                              1000);
+            	// Ustaw zmienną stanu lampki na “pulsuje” albo
+            	// po prostu potraktuj to jako włączoną (1) – zależy od Twojej logiki.
+            	l_BulbOnOff = 1; // np. '3' może oznaczać "pulse" – jeśli chcesz odróżniać.
+            	// Lub zostaw l_BulbOnOff=1 (ON) i wiedz, że
+            	// wewnętrznie obsługa jest w trybie pulsowania.
+
+            	// Rozpocznij puls
+            	// np. 4 sek na rozjaśnianie i 4 sek na przygaszanie, 100 kroków
+            	LedFade_PulseStart(&g_fadeHandle,
+            			&htim3, TIM_CHANNEL_4,
+						150,    // steps
+						1500);  // 4 sek
             }
         }
 
@@ -600,14 +607,15 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
         if (currentSubMenuIndex == 0)
         {
             // STOP -> wyłącz lampę
-        	if (l_BulbOnOff == 1)
-        	{
-        		l_BulbOnOff = 2;
-        		LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
-        		              FADE_OUT,    // kierunek
-        		              200,        // steps
-        		              1000);
-        	}
+        	// 1. Zatrzymaj pulsowanie (lub jakikolwiek aktywny fade)
+        	g_fadeHandle.isActive = false;
+
+        	// 2. Wymuś finalną jasność = włączona (CCR=0)
+        	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+
+        	// 3. Oznacz w logice, że lampka jest ON
+        	l_BulbOnOff = 1;
+
             alarmIsActive = false;
             // Przy wyjściu ze stanu -> zresetuj firstCall, by kolejnym
             // razem znowu wyświetlić „ALARM!”
@@ -630,15 +638,17 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
                     alarmData.day += 1;
                 }
             }
-            if (l_BulbOnOff == 1)
+            if (g_fadeHandle.isActive)
             {
-            	l_BulbOnOff = 2;
-            	LedFade_Start(&g_fadeHandle, &htim3, TIM_CHANNEL_4,
-            	              FADE_OUT,    // kierunek
-            	              200,        // steps
-            	              1000);
-            }
+            	g_fadeHandle.isActive = false;
 
+            	// Ustaw CCR = arr => lampka OFF
+//            	__HAL_TIM_SET_COMPARE(htim3, TIM_CHANNEL_4, htim3.Init.Period);
+//            	 Lub w stylu:
+            	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, g_fadeHandle.arr);
+            }
+            // Ustaw w logice, że lampka OFF
+            l_BulbOnOff = 2;
 
             alarmIsActive = false;
             firstCall = true;

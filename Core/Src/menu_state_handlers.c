@@ -546,19 +546,13 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
     // Flaga: czy pierwszy raz wchodzimy w stan ALARM_TRIGGERED?
     static bool firstCall = true;
 
-    // Jeśli lampa jest wyłączona, włącz i zrób fade-in (tylko raz)
+    // Jeśli lampa jest wyłączona, zacznij pulse
     if (l_BulbOnOff == 2) // lampka jest wyłączona
         {
             if (!skipLamp)
             {
-            	// Ustaw zmienną stanu lampki na “pulsuje” albo
-            	// po prostu potraktuj to jako włączoną (1) – zależy od Twojej logiki.
-            	l_BulbOnOff = 1; // np. '3' może oznaczać "pulse" – jeśli chcesz odróżniać.
-            	// Lub zostaw l_BulbOnOff=1 (ON) i wiedz, że
-            	// wewnętrznie obsługa jest w trybie pulsowania.
-
+            	l_BulbOnOff = 1;
             	// Rozpocznij puls
-            	// np. 4 sek na rozjaśnianie i 4 sek na przygaszanie, 100 kroków
             	LedFade_PulseStart(&g_fadeHandle,
             			&htim3, TIM_CHANNEL_4,
 						150,    // steps
@@ -609,12 +603,15 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             // STOP -> wyłącz lampę
         	// 1. Zatrzymaj pulsowanie (lub jakikolwiek aktywny fade)
         	g_fadeHandle.isActive = false;
+        	if (!skipLamp)
+        	{
+        		// 2. Wymuś finalną jasność = włączona (CCR=0)
+        		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
 
-        	// 2. Wymuś finalną jasność = włączona (CCR=0)
-        	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, 0);
+        		// 3. Oznacz w logice, że lampka jest ON
+        		l_BulbOnOff = 1;
 
-        	// 3. Oznacz w logice, że lampka jest ON
-        	l_BulbOnOff = 1;
+        	}
 
             alarmIsActive = false;
             // Przy wyjściu ze stanu -> zresetuj firstCall, by kolejnym
@@ -643,12 +640,11 @@ void HandleAlarmTriggered(int val, uint32_t now, Lcd_HandleTypeDef *lcd)
             	g_fadeHandle.isActive = false;
 
             	// Ustaw CCR = arr => lampka OFF
-//            	__HAL_TIM_SET_COMPARE(htim3, TIM_CHANNEL_4, htim3.Init.Period);
-//            	 Lub w stylu:
             	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_4, g_fadeHandle.arr);
+            	l_BulbOnOff = 2;
             }
             // Ustaw w logice, że lampka OFF
-            l_BulbOnOff = 2;
+
 
             alarmIsActive = false;
             firstCall = true;
